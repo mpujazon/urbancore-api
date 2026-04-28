@@ -1,8 +1,11 @@
 package com.urbancore.urbancore_api.controllers;
 
+import com.urbancore.urbancore_api.models.User;
+import com.urbancore.urbancore_api.repositories.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -10,18 +13,25 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/auth")
 public class AuthController {
+
+    @Autowired
+    private UserRepository userRepository;
     
-    @GetMapping("/me")
-    public Map<String, Object> getMyInfo(@AuthenticationPrincipal Jwt jwt) {
-        Map<String, Object> userInfo = new HashMap<>();
+    @PostMapping("/sync")
+    public User syncUser(@AuthenticationPrincipal Jwt jwt) {
+        String firebaseUid = jwt.getSubject();
+        String email = jwt.getClaimAsString("email");
 
-        userInfo.put("mensaje", "¡Bienvenido! Has atravesado la seguridad de Spring Boot");
-        userInfo.put("firebase_uid", jwt.getSubject());
-        userInfo.put("email", jwt.getClaimAsString("email"));
-        userInfo.put("email_verificado", jwt.getClaimAsBoolean("email_verified"));
-
-        return userInfo;
+        return userRepository.findByFirebaseUid(firebaseUid)
+                .orElseGet(() -> {
+                    User newUser = new User();
+                    newUser.setFirebaseUid(firebaseUid);
+                    newUser.setEmail(email);
+                    newUser.setRole("citizen");
+                    System.out.println("Saving new user: " + email);
+                    return userRepository.save(newUser);
+                });
     }
 }
