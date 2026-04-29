@@ -1,6 +1,7 @@
 package com.urbancore.urbancore_api.controllers;
 
 import com.urbancore.urbancore_api.models.User;
+import com.urbancore.urbancore_api.models.UserRole;
 import com.urbancore.urbancore_api.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -29,7 +30,7 @@ public class AuthController {
                     User newUser = new User();
                     newUser.setFirebaseUid(firebaseUid);
                     newUser.setEmail(email);
-                    newUser.setRole("citizen");
+                    newUser.setRole(UserRole.citizen);
                     System.out.println("Saving new user: " + email);
                     return userRepository.save(newUser);
                 });
