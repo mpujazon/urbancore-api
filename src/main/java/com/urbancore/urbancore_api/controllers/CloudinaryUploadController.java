@@ -2,12 +2,12 @@ package com.urbancore.urbancore_api.controllers;
 
 import com.cloudinary.Cloudinary;
 import com.urbancore.urbancore_api.dtos.UploadSignatureResponse;
+import com.urbancore.urbancore_api.models.User;
+import com.urbancore.urbancore_api.services.CurrentUserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -16,7 +16,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/uploads")
 public class CloudinaryUploadController {
+
     private final Cloudinary cloudinary;
+    private final CurrentUserService currentUserService;
 
     @Value("${cloudinary.cloud-name}")
     private String cloudName;
@@ -24,16 +26,20 @@ public class CloudinaryUploadController {
     @Value("${cloudinary.api-key}")
     private String apiKey;
 
-    public CloudinaryUploadController(Cloudinary cloudinary) {
+    public CloudinaryUploadController(
+            Cloudinary cloudinary,
+            CurrentUserService currentUserService
+    ) {
         this.cloudinary = cloudinary;
+        this.currentUserService = currentUserService;
     }
 
     @PostMapping("/signature")
     public UploadSignatureResponse createUploadSignature(@AuthenticationPrincipal Jwt jwt) {
-        Long timestamp = Instant.now().getEpochSecond();
+        User currentUser = currentUserService.getCurrentCitizen(jwt);
 
-        String firebaseUid = jwt.getSubject();
-        String folder = "incidents/" + firebaseUid;
+        Long timestamp = Instant.now().getEpochSecond();
+        String folder = "users/" + currentUser.getId() + "/incident-uploads";
 
         Map<String, Object> paramsToSign = new HashMap<>();
         paramsToSign.put("timestamp", timestamp);
