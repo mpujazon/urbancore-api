@@ -1,6 +1,7 @@
 package com.urbancore.urbancore_api.services;
 
 import com.urbancore.urbancore_api.models.User;
+import com.urbancore.urbancore_api.models.UserRole;
 import com.urbancore.urbancore_api.repositories.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -29,7 +30,7 @@ public class CurrentUserService {
     public User getCurrentCitizen(Jwt jwt) {
         User user = getCurrentUser(jwt);
 
-        if (!"citizen".equalsIgnoreCase(user.getRole())) {
+        if (!UserRole.ROLE_CITIZEN.equals(user.getRole())) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Only citizens can perform this action"
@@ -42,7 +43,7 @@ public class CurrentUserService {
     public User getCurrentAdmin(Jwt jwt) {
         User user = getCurrentUser(jwt);
 
-        if (!"admin".equalsIgnoreCase(user.getRole())) {
+        if (!UserRole.ROLE_ADMIN.equals(user.getRole())) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Only admins can perform this action"
