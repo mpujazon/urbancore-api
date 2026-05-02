@@ -1,6 +1,7 @@
 package com.urbancore.urbancore_api.services;
 
 import com.urbancore.urbancore_api.models.User;
+import com.urbancore.urbancore_api.models.UserRole;
 import com.urbancore.urbancore_api.repositories.UserRepository;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
@@ -23,7 +24,7 @@ public class AuthService {
                     User newUser = new User();
                     newUser.setFirebaseUid(firebaseUid);
                     newUser.setEmail(email);
-                    newUser.setRole("citizen");
+                    newUser.setRole(UserRole.ROLE_CITIZEN);
 
                     return userRepository.save(newUser);
                 });
