@@ -1,6 +1,6 @@
 package com.urbancore.urbancore_api.models;
 
 public enum UserRole {
-    admin,
-    citizen
+    ROLE_ADMIN,
+    ROLE_CITIZEN
 }
