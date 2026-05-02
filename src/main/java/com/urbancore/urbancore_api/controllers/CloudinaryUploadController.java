@@ -36,7 +36,7 @@ public class CloudinaryUploadController {
 
     @PostMapping("/signature")
     public UploadSignatureResponse createUploadSignature(@AuthenticationPrincipal Jwt jwt) {
-        User currentUser = currentUserService.getCurrentCitizen(jwt);
+        User currentUser = currentUserService.getCurrentUser(jwt);
 
         Long timestamp = Instant.now().getEpochSecond();
         String folder = "users/" + currentUser.getId() + "/incident-uploads";

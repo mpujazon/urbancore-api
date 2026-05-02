@@ -26,30 +26,4 @@ public class CurrentUserService {
                         "User profile not found"
                 ));
     }
-
-    public User getCurrentCitizen(Jwt jwt) {
-        User user = getCurrentUser(jwt);
-
-        if (!UserRole.ROLE_CITIZEN.equals(user.getRole())) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only citizens can perform this action"
-            );
-        }
-
-        return user;
-    }
-
-    public User getCurrentAdmin(Jwt jwt) {
-        User user = getCurrentUser(jwt);
-
-        if (!UserRole.ROLE_ADMIN.equals(user.getRole())) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only admins can perform this action"
-            );
-        }
-
-        return user;
-    }
 }
