@@ -34,6 +34,11 @@ public class IncidentController {
         return incidentService.createIncident(request, jwt);
     }
 
+    @GetMapping
+    public List<IncidentDto> getAllIncidents() {
+        return incidentService.getAllIncidents();
+    }
+
     @GetMapping("/me")
     public List<IncidentDto> getMyIncidents(@AuthenticationPrincipal Jwt jwt) {
         return incidentService.getCurrentCitizenIncidents(jwt);
