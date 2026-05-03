@@ -33,7 +33,8 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/auth/sync").authenticated()
                         .requestMatchers("/api/uploads/signature").hasRole("CITIZEN")
-                        .requestMatchers(HttpMethod.POST, "/api/incidents").hasRole("CITIZEN")
+                        .requestMatchers(HttpMethod.GET, "/incidents/me").hasRole("CITIZEN")
+                        .requestMatchers(HttpMethod.POST, "/incidents").hasRole("CITIZEN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                         .anyRequest().permitAll()
