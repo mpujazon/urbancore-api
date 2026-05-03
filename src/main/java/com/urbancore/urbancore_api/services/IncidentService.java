@@ -73,6 +73,14 @@ public class IncidentService {
         return toDto(savedIncident);
     }
 
+    public List<IncidentDto> getCurrentCitizenIncidents(Jwt jwt) {
+        User currentUser = currentUserService.getCurrentUser(jwt);
+
+        return incidentRepository.findAllByReporterIdOrderByCreatedAtDesc(currentUser.getId()).stream()
+                .map(this::toDto)
+                .toList();
+    }
+
     private void validateRequest(CreateIncidentRequest request) {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
