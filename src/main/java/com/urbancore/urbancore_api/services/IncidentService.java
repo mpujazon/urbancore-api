@@ -3,6 +3,9 @@ package com.urbancore.urbancore_api.services;
 import com.urbancore.urbancore_api.dtos.*;
 import com.urbancore.urbancore_api.models.*;
 import com.urbancore.urbancore_api.repositories.IncidentRepository;
+import com.urbancore.urbancore_api.repositories.IncidentSpecification;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
@@ -81,8 +84,9 @@ public class IncidentService {
                 .toList();
     }
 
-    public List<IncidentDto> getAllIncidents() {
-        return incidentRepository.findAllByOrderByCreatedAtDesc().stream()
+    public List<IncidentDto> getAllIncidents(IncidentFilterDto filters) {
+        Specification<Incident> spec = IncidentSpecification.withFilters(filters);
+        return incidentRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt")).stream()
                 .map(this::toDto)
                 .toList();
     }
