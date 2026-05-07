@@ -4,6 +4,8 @@ import com.urbancore.urbancore_api.dtos.ApiErrorResponse;
 import com.urbancore.urbancore_api.dtos.CreateIncidentRequest;
 import com.urbancore.urbancore_api.dtos.IncidentDto;
 import com.urbancore.urbancore_api.dtos.IncidentFilterDto;
+import com.urbancore.urbancore_api.dtos.IncidentListItemDto;
+import com.urbancore.urbancore_api.dtos.PagedResponseDto;
 import com.urbancore.urbancore_api.models.IncidentCategory;
 import com.urbancore.urbancore_api.models.IncidentPriority;
 import com.urbancore.urbancore_api.models.IncidentStatus;
@@ -91,18 +93,40 @@ public class IncidentController {
 
     @GetMapping
     @Operation(
-            summary = "List incidents (public)",
+            summary = "List incidents with server-side pagination (public)",
             description = """
-                    Returns all incidents matching optional filters. \
+                    Returns a paginated list of incidents matching optional filters. \
                     This endpoint is public — no authentication required. \
-                    Results are ordered by creation date descending.
+                    Default sort is by creation date descending.
+
+                    Pagination query parameters:
+                    - page: zero-based page index (default 0)
+                    - size: items per page (default 10, max 50)
+                    - sort: sort field and direction in Spring format, e.g. createdAt,desc \
+                    (allowed fields: createdAt, updatedAt, status, priority, category, title)
+
+                    Filter query parameters:
+                    - status: filter by incident status (e.g. NEW)
+                    - category: filter by incident category (e.g. POTHOLE)
+                    - priority: filter by priority level (e.g. HIGH)
+                    - cityId: filter by city identifier (e.g. bcn-001)
+                    - from: filter incidents created after this ISO-8601 instant
+                    - to: filter incidents created before this ISO-8601 instant
+                    - q: free-text search across title and description (case-insensitive)
+
+                    Example: GET /api/incidents?page=0&size=10&sort=createdAt,desc&status=NEW&category=LIGHTING&cityId=city_bcn
                     """
     )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Filtered list of incidents",
-                    content = @Content(schema = @Schema(implementation = IncidentDto.class))
+                    description = "Paginated list of incidents matching the filters",
+                    content = @Content(schema = @Schema(implementation = PagedResponseDto.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid pagination parameters (e.g. negative page)",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
             ),
             @ApiResponse(
                     responseCode = "500",
@@ -110,7 +134,7 @@ public class IncidentController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
             )
     })
-    public List<IncidentDto> getAllIncidents(
+    public PagedResponseDto<IncidentListItemDto> getAllIncidents(
             @RequestParam(required = false)
             @Parameter(description = "Filter by incident status", example = "NEW")
             IncidentStatus status,
@@ -139,10 +163,22 @@ public class IncidentController {
 
             @RequestParam(required = false)
             @Parameter(description = "Free-text search across title and description", example = "pothole")
-            String q
+            String q,
+
+            @RequestParam(defaultValue = "0")
+            @Parameter(description = "Zero-based page index", example = "0")
+            int page,
+
+            @RequestParam(defaultValue = "10")
+            @Parameter(description = "Number of items per page (max 50)", example = "10")
+            int size,
+
+            @RequestParam(defaultValue = "createdAt,desc")
+            @Parameter(description = "Sort field and direction (allowed fields: createdAt, updatedAt, status, priority, category, title)", example = "createdAt,desc")
+            String sort
     ) {
         IncidentFilterDto filters = new IncidentFilterDto(status, category, priority, cityId, from, to, q);
-        return incidentService.getAllIncidents(filters);
+        return incidentService.getAllIncidents(filters, page, size, sort);
     }
 
     @GetMapping("/me")
