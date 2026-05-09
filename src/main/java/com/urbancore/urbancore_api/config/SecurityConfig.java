@@ -30,6 +30,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/incidents").permitAll()
 
                         .requestMatchers("/api/auth/sync").authenticated()
                         .requestMatchers("/api/uploads/signature").hasRole("CITIZEN")

@@ -3,6 +3,12 @@ package com.urbancore.urbancore_api.services;
 import com.urbancore.urbancore_api.dtos.*;
 import com.urbancore.urbancore_api.models.*;
 import com.urbancore.urbancore_api.repositories.IncidentRepository;
+import com.urbancore.urbancore_api.repositories.IncidentSpecification;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
@@ -12,6 +18,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -73,12 +80,103 @@ public class IncidentService {
         return toDto(savedIncident);
     }
 
-    public List<IncidentDto> getCurrentCitizenIncidents(Jwt jwt) {
+    public List<IncidentListItemDto> getCurrentCitizenIncidents(Jwt jwt) {
         User currentUser = currentUserService.getCurrentUser(jwt);
 
         return incidentRepository.findAllByReporterIdOrderByCreatedAtDesc(currentUser.getId()).stream()
-                .map(this::toDto)
+                .map(this::toListItemDto)
                 .toList();
+    }
+
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "createdAt", "updatedAt", "status", "priority", "category", "title"
+    );
+
+    private static final int MAX_PAGE_SIZE = 50;
+
+    public PagedResponseDto<IncidentListItemDto> getAllIncidents(IncidentFilterDto filters, int page, int size, String sortParam) {
+        if (page < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page must not be negative");
+        }
+        if (size < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "size must be greater than 0");
+        }
+
+        int effectiveSize = Math.min(size, MAX_PAGE_SIZE);
+        Sort sort = parseSort(sortParam);
+        Pageable pageable = PageRequest.of(page, effectiveSize, sort);
+
+        Specification<Incident> spec = IncidentSpecification.withFilters(filters);
+        Page<Incident> resultPage = incidentRepository.findAll(spec, pageable);
+
+        List<IncidentListItemDto> content = resultPage.getContent().stream()
+                .map(this::toListItemDto)
+                .toList();
+
+        List<SortDto> sortDtos = sort.stream()
+                .map(o -> new SortDto(o.getProperty(), o.getDirection().name()))
+                .toList();
+
+        return new PagedResponseDto<>(
+                content,
+                resultPage.getNumber(),
+                resultPage.getSize(),
+                resultPage.getTotalElements(),
+                resultPage.getTotalPages(),
+                resultPage.isFirst(),
+                resultPage.isLast(),
+                sortDtos
+        );
+    }
+
+    private Sort parseSort(String sortParam) {
+        if (sortParam == null || sortParam.isBlank()) {
+            return Sort.by(Sort.Direction.DESC, "createdAt");
+        }
+
+        String[] parts = sortParam.split(",");
+        if (parts.length == 0) {
+            return Sort.by(Sort.Direction.DESC, "createdAt");
+        }
+
+        String field = parts[0].trim();
+        String rawDirection = parts.length > 1 ? parts[1].trim().toUpperCase() : "DESC";
+
+        if (!ALLOWED_SORT_FIELDS.contains(field)) {
+            return Sort.by(Sort.Direction.DESC, "createdAt");
+        }
+
+        Sort.Direction direction = "ASC".equals(rawDirection) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        return Sort.by(direction, field);
+    }
+
+    private IncidentListItemDto toListItemDto(Incident incident) {
+        String thumbnailUrl = null;
+        if (incident.getImages() != null && !incident.getImages().isEmpty()) {
+            thumbnailUrl = incident.getImages().get(0).getThumbnailUrl();
+        }
+
+        IncidentLocationDto locationDto = new IncidentLocationDto(
+                incident.getLat(),
+                incident.getLng(),
+                incident.getAddressLabel(),
+                incident.getArea(),
+                incident.getCity(),
+                incident.getGeohash()
+        );
+
+        return new IncidentListItemDto(
+                incident.getId(),
+                incident.getTitle(),
+                incident.getCategory(),
+                incident.getStatus(),
+                incident.getPriority(),
+                incident.getCityId(),
+                thumbnailUrl,
+                locationDto,
+                incident.getCreatedAt().toString(),
+                incident.getUpdatedAt().toString()
+        );
     }
 
     private void validateRequest(CreateIncidentRequest request) {
