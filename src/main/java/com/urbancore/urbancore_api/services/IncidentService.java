@@ -88,6 +88,53 @@ public class IncidentService {
                 .toList();
     }
 
+    public PublicIncidentDetailResponse getPublicIncidentDetail(String id) {
+        Incident incident = incidentRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+
+        PublicIncidentLocationResponse location = new PublicIncidentLocationResponse(
+                incident.getLat(),
+                incident.getLng(),
+                incident.getAddressLabel(),
+                incident.getArea(),
+                incident.getCity()
+        );
+
+        List<PublicIncidentImageResponse> images = incident.getImages().stream()
+                .map(image -> new PublicIncidentImageResponse(
+                        image.getId(),
+                        image.getUrl(),
+                        image.getThumbnailUrl(),
+                        image.getMimeType(),
+                        image.getSizeKb()
+                ))
+                .toList();
+
+        List<PublicIncidentStatusHistoryResponse> statusHistory = incident.getStatusHistory().stream()
+                .map(history -> new PublicIncidentStatusHistoryResponse(
+                        history.getId(),
+                        history.getFromStatus(),
+                        history.getToStatus(),
+                        history.getChangedAt()
+                ))
+                .toList();
+
+        return new PublicIncidentDetailResponse(
+                incident.getId(),
+                incident.getTitle(),
+                incident.getDescription(),
+                incident.getCategory(),
+                incident.getStatus(),
+                incident.getCityId(),
+                location,
+                images,
+                List.of(),
+                statusHistory,
+                incident.getCreatedAt(),
+                incident.getUpdatedAt()
+        );
+    }
+
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
             "createdAt", "updatedAt", "status", "priority", "category", "title"
     );
