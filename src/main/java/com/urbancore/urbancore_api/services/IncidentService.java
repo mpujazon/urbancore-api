@@ -80,11 +80,11 @@ public class IncidentService {
         return toDto(savedIncident);
     }
 
-    public List<IncidentDto> getCurrentCitizenIncidents(Jwt jwt) {
+    public List<IncidentListItemDto> getCurrentCitizenIncidents(Jwt jwt) {
         User currentUser = currentUserService.getCurrentUser(jwt);
 
         return incidentRepository.findAllByReporterIdOrderByCreatedAtDesc(currentUser.getId()).stream()
-                .map(this::toDto)
+                .map(this::toListItemDto)
                 .toList();
     }
 
