@@ -212,7 +212,7 @@ public class IncidentController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
             )
     })
-    public List<IncidentDto> getMyIncidents(@AuthenticationPrincipal Jwt jwt) {
+    public List<IncidentListItemDto> getCurrentCitizenIncidents(@AuthenticationPrincipal Jwt jwt) {
         return incidentService.getCurrentCitizenIncidents(jwt);
     }
 }
