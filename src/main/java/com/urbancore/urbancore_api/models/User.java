@@ -1,23 +1,29 @@
 package com.urbancore.urbancore_api.models;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "users")
+@Schema(description = "UrbanCore user profile synchronized from Firebase Auth")
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Schema(description = "Internal user identifier", example = "42")
     private Long id;
 
     @Column(unique = true, nullable = false, columnDefinition = "TEXT")
+    @Schema(description = "Firebase Auth UID", example = "abc123def456")
     private String firebaseUid;
 
     @Column(columnDefinition = "TEXT")
+    @Schema(description = "User email from Firebase", example = "citizen@example.com")
     private String email;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Schema(description = "Authorization role", example = "ROLE_CITIZEN")
     private UserRole role;
 
     public Long getId() {
