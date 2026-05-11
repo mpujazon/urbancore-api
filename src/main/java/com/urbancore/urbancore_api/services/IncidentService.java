@@ -1,6 +1,7 @@
 package com.urbancore.urbancore_api.services;
 
 import com.urbancore.urbancore_api.dtos.*;
+import com.urbancore.urbancore_api.mappers.PublicIncidentMapper;
 import com.urbancore.urbancore_api.models.*;
 import com.urbancore.urbancore_api.repositories.IncidentRepository;
 import com.urbancore.urbancore_api.repositories.IncidentSpecification;
@@ -26,10 +27,16 @@ public class IncidentService {
 
     private final IncidentRepository incidentRepository;
     private final CurrentUserService currentUserService;
+    private final PublicIncidentMapper publicIncidentMapper;
 
-    public IncidentService(IncidentRepository incidentRepository, CurrentUserService currentUserService) {
+    public IncidentService(
+            IncidentRepository incidentRepository,
+            CurrentUserService currentUserService,
+            PublicIncidentMapper publicIncidentMapper
+    ) {
         this.incidentRepository = incidentRepository;
         this.currentUserService = currentUserService;
+        this.publicIncidentMapper = publicIncidentMapper;
     }
 
     public IncidentDto createIncident(CreateIncidentRequest request, Jwt jwt) {
@@ -88,51 +95,11 @@ public class IncidentService {
                 .toList();
     }
 
-    public PublicIncidentDetailResponse getPublicIncidentDetail(String id) {
+    public PublicIncidentDetailResponse getPublicIncidentDetailById(String id) {
         Incident incident = incidentRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
 
-        PublicIncidentLocationResponse location = new PublicIncidentLocationResponse(
-                incident.getLat(),
-                incident.getLng(),
-                incident.getAddressLabel(),
-                incident.getArea(),
-                incident.getCity()
-        );
-
-        List<PublicIncidentImageResponse> images = incident.getImages().stream()
-                .map(image -> new PublicIncidentImageResponse(
-                        image.getId(),
-                        image.getUrl(),
-                        image.getThumbnailUrl(),
-                        image.getMimeType(),
-                        image.getSizeKb()
-                ))
-                .toList();
-
-        List<PublicIncidentStatusHistoryResponse> statusHistory = incident.getStatusHistory().stream()
-                .map(history -> new PublicIncidentStatusHistoryResponse(
-                        history.getId(),
-                        history.getFromStatus(),
-                        history.getToStatus(),
-                        history.getChangedAt()
-                ))
-                .toList();
-
-        return new PublicIncidentDetailResponse(
-                incident.getId(),
-                incident.getTitle(),
-                incident.getDescription(),
-                incident.getCategory(),
-                incident.getStatus(),
-                incident.getCityId(),
-                location,
-                images,
-                List.of(),
-                statusHistory,
-                incident.getCreatedAt(),
-                incident.getUpdatedAt()
-        );
+        return publicIncidentMapper.toDetailResponse(incident);
     }
 
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(

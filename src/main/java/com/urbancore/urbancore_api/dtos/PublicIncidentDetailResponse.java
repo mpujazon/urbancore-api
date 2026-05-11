@@ -1,6 +1,7 @@
 package com.urbancore.urbancore_api.dtos;
 
 import com.urbancore.urbancore_api.models.IncidentCategory;
+import com.urbancore.urbancore_api.models.IncidentPriority;
 import com.urbancore.urbancore_api.models.IncidentStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -23,6 +24,9 @@ public record PublicIncidentDetailResponse(
 
         @Schema(description = "Current lifecycle status", example = "UNDER_REVIEW")
         IncidentStatus status,
+
+        @Schema(description = "Current priority level", example = "HIGH")
+        IncidentPriority priority,
 
         @Schema(description = "City identifier", example = "bcn-001")
         String cityId,

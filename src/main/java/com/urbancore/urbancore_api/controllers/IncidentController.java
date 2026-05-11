@@ -185,7 +185,7 @@ public class IncidentController {
 
     @GetMapping("/{id}")
     @Operation(
-            summary = "Get public incident detail by id",
+            summary = "Get public incident detail",
             description = """
                     Returns a public-safe incident detail for transparency pages. \
                     This endpoint is public — no authentication required. \
@@ -214,7 +214,7 @@ public class IncidentController {
             @Parameter(description = "Incident identifier (UUID)", example = "550e8400-e29b-41d4-a716-446655440000")
             String id
     ) {
-        return incidentService.getPublicIncidentDetail(id);
+        return incidentService.getPublicIncidentDetailById(id);
     }
 
     @GetMapping("/me")

@@ -112,6 +112,7 @@ class IncidentControllerTest {
                     .andExpect(jsonPath("$.description").exists())
                     .andExpect(jsonPath("$.category").value("LIGHTING"))
                     .andExpect(jsonPath("$.status").value("UNDER_REVIEW"))
+                    .andExpect(jsonPath("$.priority").value("HIGH"))
                     .andExpect(jsonPath("$.cityId").value("city_bcn"))
                     .andExpect(jsonPath("$.location.lat").exists())
                     .andExpect(jsonPath("$.images[0].id").value("img-001"))
