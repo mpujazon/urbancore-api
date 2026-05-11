@@ -30,13 +30,13 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/incidents/me").hasRole("CITIZEN")
+                        .requestMatchers(HttpMethod.POST, "/api/incidents").hasRole("CITIZEN")
                         .requestMatchers(HttpMethod.GET, "/api/incidents").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/incidents/*").permitAll()
 
                         .requestMatchers("/api/auth/sync").authenticated()
                         .requestMatchers("/api/uploads/signature").hasRole("CITIZEN")
-                        .requestMatchers(HttpMethod.GET, "/incidents/me").hasRole("CITIZEN")
-                        .requestMatchers(HttpMethod.POST, "/incidents").hasRole("CITIZEN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                         .anyRequest().permitAll()
