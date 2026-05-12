@@ -1,6 +1,7 @@
 package com.urbancore.urbancore_api.services;
 
 import com.urbancore.urbancore_api.dtos.*;
+import com.urbancore.urbancore_api.mappers.PublicIncidentMapper;
 import com.urbancore.urbancore_api.models.*;
 import com.urbancore.urbancore_api.repositories.IncidentRepository;
 import com.urbancore.urbancore_api.repositories.IncidentSpecification;
@@ -26,10 +27,16 @@ public class IncidentService {
 
     private final IncidentRepository incidentRepository;
     private final CurrentUserService currentUserService;
+    private final PublicIncidentMapper publicIncidentMapper;
 
-    public IncidentService(IncidentRepository incidentRepository, CurrentUserService currentUserService) {
+    public IncidentService(
+            IncidentRepository incidentRepository,
+            CurrentUserService currentUserService,
+            PublicIncidentMapper publicIncidentMapper
+    ) {
         this.incidentRepository = incidentRepository;
         this.currentUserService = currentUserService;
+        this.publicIncidentMapper = publicIncidentMapper;
     }
 
     public IncidentDto createIncident(CreateIncidentRequest request, Jwt jwt) {
@@ -86,6 +93,13 @@ public class IncidentService {
         return incidentRepository.findAllByReporterIdOrderByCreatedAtDesc(currentUser.getId()).stream()
                 .map(this::toListItemDto)
                 .toList();
+    }
+
+    public PublicIncidentDetailResponse getPublicIncidentDetailById(String id) {
+        Incident incident = incidentRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+
+        return publicIncidentMapper.toDetailResponse(incident);
     }
 
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
