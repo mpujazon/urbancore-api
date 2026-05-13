@@ -13,7 +13,7 @@ public class IncidentStatusHistory {
     private String id;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column
     private IncidentStatus fromStatus;
 
     @Enumerated(EnumType.STRING)

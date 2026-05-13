@@ -8,7 +8,7 @@ public record IncidentStatusHistoryDto(
         @Schema(description = "History entry identifier", example = "h-01abc")
         String id,
 
-        @Schema(description = "Previous status", example = "NEW")
+        @Schema(description = "Previous status (nullable for the first transition)", example = "NEW", nullable = true)
         IncidentStatus fromStatus,
 
         @Schema(description = "New status after transition", example = "UNDER_REVIEW")
