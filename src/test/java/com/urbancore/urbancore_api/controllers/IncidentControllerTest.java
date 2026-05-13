@@ -64,7 +64,6 @@ class IncidentControllerTest {
         incident.setLat(41.3874);
         incident.setLng(2.1686);
         incident.setAddressLabel("Test Address");
-        incident.setArea("Test Area");
         incident.setCity("Test City");
         incident.setGeohash("sp3e3w");
         incident.setImages(List.of());

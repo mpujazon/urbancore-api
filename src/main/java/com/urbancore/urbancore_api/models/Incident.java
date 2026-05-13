@@ -49,9 +49,6 @@ public class Incident {
     private String addressLabel;
 
     @Column(columnDefinition = "TEXT")
-    private String area;
-
-    @Column(columnDefinition = "TEXT")
     private String city;
 
     @Column(nullable = false, columnDefinition = "TEXT")
@@ -171,14 +168,6 @@ public class Incident {
 
     public void setAddressLabel(String addressLabel) {
         this.addressLabel = addressLabel;
-    }
-
-    public String getArea() {
-        return area;
-    }
-
-    public void setArea(String area) {
-        this.area = area;
     }
 
     public String getCity() {

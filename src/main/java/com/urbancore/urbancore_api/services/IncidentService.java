@@ -56,7 +56,6 @@ public class IncidentService {
         incident.setLat(request.location().lat());
         incident.setLng(request.location().lng());
         incident.setAddressLabel(request.location().addressLabel());
-        incident.setArea(request.location().area());
         incident.setCity(request.location().city());
         incident.setGeohash(resolveGeohash(request.location()));
 
@@ -174,7 +173,6 @@ public class IncidentService {
                 incident.getLat(),
                 incident.getLng(),
                 incident.getAddressLabel(),
-                incident.getArea(),
                 incident.getCity(),
                 incident.getGeohash()
         );
@@ -248,7 +246,6 @@ public class IncidentService {
                 incident.getLat(),
                 incident.getLng(),
                 incident.getAddressLabel(),
-                incident.getArea(),
                 incident.getCity(),
                 incident.getGeohash()
         );

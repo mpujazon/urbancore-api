@@ -17,7 +17,6 @@ public class PublicIncidentMapper {
                 incident.getLat(),
                 incident.getLng(),
                 incident.getAddressLabel(),
-                incident.getArea(),
                 incident.getCity()
         );
 

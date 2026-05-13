@@ -13,9 +13,6 @@ public record PublicIncidentLocationResponse(
         @Schema(description = "Human-readable address label", example = "Carrer de Balmes, 42")
         String addressLabel,
 
-        @Schema(description = "Neighborhood or district", example = "Eixample")
-        String area,
-
         @Schema(description = "City name", example = "Barcelona")
         String city
 ) {
