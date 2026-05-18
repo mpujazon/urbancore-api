@@ -131,6 +131,67 @@ public class IncidentService {
         incidentRepository.delete(incident);
     }
 
+    public IncidentDto updateIncidentStatus(String id, UpdateIncidentStatusRequest request, Jwt jwt) {
+        if (request == null || request.status() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status is required");
+        }
+        if (request.status() == IncidentStatus.NULL) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status must be a valid incident status");
+        }
+
+        User currentUser = currentUserService.getCurrentUser(jwt);
+
+        Incident incident = incidentRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+
+        IncidentStatus currentStatus = incident.getStatus();
+        IncidentStatus nextStatus = request.status();
+
+        if (currentStatus != nextStatus) {
+            incident.setStatus(nextStatus);
+
+            List<IncidentStatusHistory> history = incident.getStatusHistory();
+            if (history == null) {
+                history = new ArrayList<>();
+                incident.setStatusHistory(history);
+            }
+
+            String reason = request.reason();
+            if (reason != null) {
+                reason = reason.trim();
+                if (reason.isBlank()) {
+                    reason = null;
+                }
+            }
+
+            IncidentStatusHistory historyEntry = new IncidentStatusHistory();
+            historyEntry.setId(UUID.randomUUID().toString());
+            historyEntry.setFromStatus(currentStatus);
+            historyEntry.setToStatus(nextStatus);
+            historyEntry.setChangedBy(String.valueOf(currentUser.getId()));
+            historyEntry.setReason(reason);
+            historyEntry.setChangedAt(Instant.now());
+            historyEntry.setIncident(incident);
+            history.add(historyEntry);
+        }
+
+        Incident updated = incidentRepository.save(incident);
+        return toDto(updated);
+    }
+
+    public IncidentDto updateIncidentPriority(String id, UpdateIncidentPriorityRequest request) {
+        if (request == null || request.priority() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "priority is required");
+        }
+
+        Incident incident = incidentRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+
+        incident.setPriority(request.priority());
+        Incident updated = incidentRepository.save(incident);
+        return toDto(updated);
+    }
+
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
             "createdAt", "updatedAt", "status", "priority", "category", "title"
     );
