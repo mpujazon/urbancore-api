@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
@@ -44,6 +45,29 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(status).body(body);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleMethodArgumentTypeMismatch(
+            MethodArgumentTypeMismatchException ex,
+            HttpServletRequest request
+    ) {
+        String traceId = UUID.randomUUID().toString().substring(0, 10);
+        String fieldName = ex.getName() != null ? ex.getName() : "query parameter";
+        String message = "Invalid value for parameter '" + fieldName + "'";
+
+        ApiErrorResponse body = new ApiErrorResponse(
+                Instant.now().toString(),
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                "VALIDATION_FAILED",
+                message,
+                request.getRequestURI(),
+                List.of(),
+                traceId
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
     @ExceptionHandler(Exception.class)
