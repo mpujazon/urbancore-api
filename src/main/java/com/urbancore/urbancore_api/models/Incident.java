@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.urbancore.plannedactions.domain.PlannedAction;
+
 @Entity
 @Table(name = "incidents")
 public class Incident {
@@ -56,6 +58,9 @@ public class Incident {
 
     @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<IncidentImage> images = new ArrayList<>();
+    
+    @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PlannedAction> plannedActions = new ArrayList<>();
 
     @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<IncidentStatusHistory> statusHistory = new ArrayList<>();
