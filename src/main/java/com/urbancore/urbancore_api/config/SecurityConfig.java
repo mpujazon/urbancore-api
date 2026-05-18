@@ -32,6 +32,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/incidents/me").hasRole("CITIZEN")
                         .requestMatchers(HttpMethod.POST, "/api/incidents").hasRole("CITIZEN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/incidents/*").hasAnyRole("CITIZEN", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/incidents").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/incidents/*").permitAll()
 
