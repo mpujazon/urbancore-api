@@ -6,6 +6,7 @@ import com.urbancore.urbancore_api.dtos.UpdatePlannedActionRequest;
 import com.urbancore.urbancore_api.mappers.PlannedActionMapper;
 import com.urbancore.urbancore_api.models.Incident;
 import com.urbancore.urbancore_api.models.IncidentStatus;
+import com.urbancore.urbancore_api.models.IncidentStatusHistory;
 import com.urbancore.urbancore_api.models.PlannedAction;
 import com.urbancore.urbancore_api.models.PlannedActionStatus;
 import com.urbancore.urbancore_api.models.User;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -47,6 +49,7 @@ public class PlannedActionService {
 
         Incident incident = incidentRepository.findById(request.incidentId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+        assertIncidentIsMutable(incident);
 
         User createdBy = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Creator user not found"));
@@ -64,17 +67,17 @@ public class PlannedActionService {
         );
 
         PlannedAction saved = plannedActionRepository.save(plannedAction);
-
-        incident.setStatus(IncidentStatus.PLANNED);
-        incidentRepository.save(incident);
+        transitionIncidentStatus(incident, IncidentStatus.PLANNED, String.valueOf(currentUserId));
 
         return plannedActionMapper.toResponse(saved);
     }
 
     @Transactional
-    public PlannedActionResponse update(UUID plannedActionId, UpdatePlannedActionRequest request) {
+    public PlannedActionResponse update(UUID plannedActionId, UpdatePlannedActionRequest request, Long currentUserId) {
         PlannedAction plannedAction = plannedActionRepository.findById(plannedActionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Planned action not found"));
+
+        assertIncidentIsMutable(plannedAction.getIncident());
 
         Instant nextStart = request.scheduledStart() != null ? request.scheduledStart() : plannedAction.getScheduledStart();
         Instant nextEnd = request.scheduledEnd() != null ? request.scheduledEnd() : plannedAction.getScheduledEnd();
@@ -96,20 +99,22 @@ public class PlannedActionService {
         }
 
         PlannedAction saved = plannedActionRepository.save(plannedAction);
-        recalculateIncidentStatusIfNoActiveActions(saved.getIncident());
+        recalculateIncidentStatusIfNoActiveActions(saved.getIncident(), String.valueOf(currentUserId));
 
         return plannedActionMapper.toResponse(saved);
     }
 
     @Transactional
-    public void delete(UUID plannedActionId) {
+    public void delete(UUID plannedActionId, Long currentUserId) {
         PlannedAction plannedAction = plannedActionRepository.findById(plannedActionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Planned action not found"));
+
+        assertIncidentIsMutable(plannedAction.getIncident());
 
         Incident incident = plannedAction.getIncident();
         plannedActionRepository.delete(plannedAction);
 
-        recalculateIncidentStatusIfNoActiveActions(incident);
+        recalculateIncidentStatusIfNoActiveActions(incident, String.valueOf(currentUserId));
     }
 
     @Transactional(readOnly = true)
@@ -150,14 +155,51 @@ public class PlannedActionService {
         }
     }
 
-    private void recalculateIncidentStatusIfNoActiveActions(Incident incident) {
+    private void recalculateIncidentStatusIfNoActiveActions(Incident incident, String changedBy) {
         boolean hasActiveActions = plannedActionRepository.existsByIncidentIdAndStatusNot(
                 incident.getId(),
                 PlannedActionStatus.CANCELLED
         );
         if (!hasActiveActions) {
-            incident.setStatus(IncidentStatus.CANCELLED);
-            incidentRepository.save(incident);
+            transitionIncidentStatus(incident, IncidentStatus.CANCELLED, changedBy);
+        }
+    }
+
+    private void transitionIncidentStatus(Incident incident, IncidentStatus nextStatus, String changedBy) {
+        IncidentStatus currentStatus = incident.getStatus();
+        if (currentStatus == nextStatus) {
+            return;
+        }
+
+        incident.setStatus(nextStatus);
+
+        List<IncidentStatusHistory> history = incident.getStatusHistory();
+        if (history == null) {
+            history = new ArrayList<>();
+            incident.setStatusHistory(history);
+        }
+
+        IncidentStatusHistory historyEntry = new IncidentStatusHistory();
+        historyEntry.setId(UUID.randomUUID().toString());
+        historyEntry.setFromStatus(currentStatus);
+        historyEntry.setToStatus(nextStatus);
+        historyEntry.setChangedBy(changedBy);
+        historyEntry.setChangedAt(Instant.now());
+        historyEntry.setIncident(incident);
+        history.add(historyEntry);
+
+        incidentRepository.save(incident);
+    }
+
+    private void assertIncidentIsMutable(Incident incident) {
+        IncidentStatus status = incident.getStatus();
+        if (status == IncidentStatus.CANCELLED
+                || status == IncidentStatus.REJECTED
+                || status == IncidentStatus.RESOLVED) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Incident cannot be modified when status is CANCELLED, REJECTED, or RESOLVED"
+            );
         }
     }
 }
