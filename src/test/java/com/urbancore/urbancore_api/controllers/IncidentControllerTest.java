@@ -64,13 +64,84 @@ class IncidentControllerTest {
         incident.setLat(41.3874);
         incident.setLng(2.1686);
         incident.setAddressLabel("Test Address");
-        incident.setArea("Test Area");
         incident.setCity("Test City");
         incident.setGeohash("sp3e3w");
         incident.setImages(List.of());
         incident.setStatusHistory(List.of());
         incident.onCreate();
         return incidentRepository.save(incident);
+    }
+
+    @Nested
+    @DisplayName("Public incident detail")
+    class PublicIncidentDetail {
+
+        @Test
+        @DisplayName("should return public-safe incident detail by id")
+        void returnsPublicDetail() throws Exception {
+            Incident incident = createIncident("Detailed Incident", IncidentCategory.LIGHTING, IncidentStatus.UNDER_REVIEW,
+                    IncidentPriority.HIGH, "city_bcn");
+
+            IncidentImage image = new IncidentImage();
+            image.setId("img-001");
+            image.setUrl("https://example.com/image.jpg");
+            image.setThumbnailUrl("https://example.com/thumb.jpg");
+            image.setPublicId("private-cloudinary-id");
+            image.setMimeType("image/jpeg");
+            image.setSizeKb(120);
+            image.setIncident(incident);
+
+            IncidentStatusHistory history = new IncidentStatusHistory();
+            history.setId("hist-001");
+            history.setFromStatus(IncidentStatus.NEW);
+            history.setToStatus(IncidentStatus.UNDER_REVIEW);
+            history.setChangedBy("admin-123");
+            history.setReason("internal note");
+            history.setChangedAt(Instant.now());
+            history.setIncident(incident);
+
+            incident.setImages(List.of(image));
+            incident.setStatusHistory(List.of(history));
+            incident = incidentRepository.save(incident);
+
+            mockMvc.perform(get("/api/incidents/{id}", incident.getId()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(incident.getId()))
+                    .andExpect(jsonPath("$.title").value("Detailed Incident"))
+                    .andExpect(jsonPath("$.description").exists())
+                    .andExpect(jsonPath("$.category").value("LIGHTING"))
+                    .andExpect(jsonPath("$.status").value("UNDER_REVIEW"))
+                    .andExpect(jsonPath("$.priority").value("HIGH"))
+                    .andExpect(jsonPath("$.cityId").value("city_bcn"))
+                    .andExpect(jsonPath("$.location.lat").exists())
+                    .andExpect(jsonPath("$.images[0].id").value("img-001"))
+                    .andExpect(jsonPath("$.images[0].url").value("https://example.com/image.jpg"))
+                    .andExpect(jsonPath("$.images[0].thumbnailUrl").value("https://example.com/thumb.jpg"))
+                    .andExpect(jsonPath("$.images[0].mimeType").value("image/jpeg"))
+                    .andExpect(jsonPath("$.images[0].sizeKb").value(120))
+                    .andExpect(jsonPath("$.plannedActions").isArray())
+                    .andExpect(jsonPath("$.statusHistory").isArray())
+                    .andExpect(jsonPath("$.statusHistory[0].id").value("hist-001"))
+                    .andExpect(jsonPath("$.statusHistory[0].fromStatus").value("NEW"))
+                    .andExpect(jsonPath("$.statusHistory[0].toStatus").value("UNDER_REVIEW"))
+                    .andExpect(jsonPath("$.statusHistory[0].changedAt").exists())
+                    .andExpect(jsonPath("$.statusHistory[0].changedBy").doesNotExist())
+                    .andExpect(jsonPath("$.statusHistory[0].reason").doesNotExist())
+                    .andExpect(jsonPath("$.reporter").doesNotExist())
+                    .andExpect(jsonPath("$.reporterId").doesNotExist())
+                    .andExpect(jsonPath("$.reporterDisplayName").doesNotExist())
+                    .andExpect(jsonPath("$.images[0].publicId").doesNotExist());
+        }
+
+        @Test
+        @DisplayName("should return 404 when incident id does not exist")
+        void returns404WhenNotFound() throws Exception {
+            mockMvc.perform(get("/api/incidents/{id}", "non-existent-id"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.status").value(404))
+                    .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"))
+                    .andExpect(jsonPath("$.message").value("Incident not found"));
+        }
     }
 
     @Nested

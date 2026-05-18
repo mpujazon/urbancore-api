@@ -26,6 +26,8 @@ import java.util.Map;
 @Tag(name = "Uploads", description = "Cloudinary upload signature generation")
 public class CloudinaryUploadController {
 
+    private static final String UPLOAD_FORMAT = "webp";
+
     private final Cloudinary cloudinary;
     private final CurrentUserService currentUserService;
 
@@ -49,7 +51,7 @@ public class CloudinaryUploadController {
             description = """
                     Creates a signed upload signature so the Angular frontend can upload \
                     images directly to Cloudinary before creating an incident. \
-                    The folder is scoped to the authenticated user. \
+                    The folder is scoped to the authenticated user and output format is forced to WebP. \
                     Requires CITIZEN role.
                     """,
             security = @SecurityRequirement(name = "BearerAuth")
@@ -85,6 +87,7 @@ public class CloudinaryUploadController {
         Map<String, Object> paramsToSign = new HashMap<>();
         paramsToSign.put("timestamp", timestamp);
         paramsToSign.put("folder", folder);
+        paramsToSign.put("format", UPLOAD_FORMAT);
 
         String signature = cloudinary.apiSignRequest(
                 paramsToSign,
@@ -96,6 +99,7 @@ public class CloudinaryUploadController {
                 apiKey,
                 timestamp,
                 folder,
+                UPLOAD_FORMAT,
                 signature
         );
     }

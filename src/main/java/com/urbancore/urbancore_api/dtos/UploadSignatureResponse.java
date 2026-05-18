@@ -16,6 +16,9 @@ public record UploadSignatureResponse(
         @Schema(description = "Cloudinary folder where the file will be stored", example = "users/42/incident-uploads")
         String folder,
 
+        @Schema(description = "Output image format enforced for signed uploads", example = "webp")
+        String format,
+
         @Schema(description = "HMAC-SHA1 signature for the upload parameters", example = "a1b2c3d4e5f6...")
         String signature
 ) {
