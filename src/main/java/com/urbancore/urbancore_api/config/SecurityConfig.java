@@ -35,6 +35,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/incidents").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/incidents/*").permitAll()
 
+                        .requestMatchers(HttpMethod.GET, "/api/planned-actions").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/planned-actions/incident/*").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/planned-actions").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/planned-actions/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/planned-actions/*").hasRole("ADMIN")
+
                         .requestMatchers("/api/auth/sync").authenticated()
                         .requestMatchers("/api/uploads/signature").hasRole("CITIZEN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
