@@ -4,6 +4,7 @@ import com.urbancore.urbancore_api.dtos.PublicIncidentDetailResponse;
 import com.urbancore.urbancore_api.dtos.PublicIncidentImageResponse;
 import com.urbancore.urbancore_api.dtos.PublicIncidentLocationResponse;
 import com.urbancore.urbancore_api.dtos.PublicIncidentStatusHistoryResponse;
+import com.urbancore.urbancore_api.dtos.PublicPlannedActionResponse;
 import com.urbancore.urbancore_api.models.Incident;
 import org.springframework.stereotype.Component;
 
@@ -12,12 +13,17 @@ import java.util.List;
 @Component
 public class PublicIncidentMapper {
 
+    private final PlannedActionMapper plannedActionMapper;
+
+    public PublicIncidentMapper(PlannedActionMapper plannedActionMapper) {
+        this.plannedActionMapper = plannedActionMapper;
+    }
+
     public PublicIncidentDetailResponse toDetailResponse(Incident incident) {
         PublicIncidentLocationResponse location = new PublicIncidentLocationResponse(
                 incident.getLat(),
                 incident.getLng(),
                 incident.getAddressLabel(),
-                incident.getArea(),
                 incident.getCity()
         );
 
@@ -40,6 +46,10 @@ public class PublicIncidentMapper {
                 ))
                 .toList();
 
+        List<PublicPlannedActionResponse> plannedActions = incident.getPlannedActions().stream()
+                .map(plannedActionMapper::toPublicResponse)
+                .toList();
+
         return new PublicIncidentDetailResponse(
                 incident.getId(),
                 incident.getTitle(),
@@ -50,7 +60,7 @@ public class PublicIncidentMapper {
                 incident.getCityId(),
                 location,
                 images,
-                List.of(),
+                plannedActions,
                 statusHistory,
                 incident.getCreatedAt(),
                 incident.getUpdatedAt()

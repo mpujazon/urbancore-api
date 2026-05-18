@@ -32,8 +32,17 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/incidents/me").hasRole("CITIZEN")
                         .requestMatchers(HttpMethod.POST, "/api/incidents").hasRole("CITIZEN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/incidents/*/status").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/incidents/*/priority").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/incidents/*").hasAnyRole("CITIZEN", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/incidents").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/incidents/*").permitAll()
+
+                        .requestMatchers(HttpMethod.GET, "/api/planned-actions").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/planned-actions/incident/*").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/planned-actions").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/planned-actions/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/planned-actions/*").hasRole("ADMIN")
 
                         .requestMatchers("/api/auth/sync").authenticated()
                         .requestMatchers("/api/uploads/signature").hasRole("CITIZEN")

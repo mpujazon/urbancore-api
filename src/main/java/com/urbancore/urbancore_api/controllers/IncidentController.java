@@ -7,6 +7,8 @@ import com.urbancore.urbancore_api.dtos.IncidentFilterDto;
 import com.urbancore.urbancore_api.dtos.IncidentListItemDto;
 import com.urbancore.urbancore_api.dtos.PagedResponseDto;
 import com.urbancore.urbancore_api.dtos.PublicIncidentDetailResponse;
+import com.urbancore.urbancore_api.dtos.UpdateIncidentPriorityRequest;
+import com.urbancore.urbancore_api.dtos.UpdateIncidentStatusRequest;
 import com.urbancore.urbancore_api.models.IncidentCategory;
 import com.urbancore.urbancore_api.models.IncidentPriority;
 import com.urbancore.urbancore_api.models.IncidentStatus;
@@ -23,7 +25,9 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -250,5 +254,156 @@ public class IncidentController {
     })
     public List<IncidentListItemDto> getCurrentCitizenIncidents(@AuthenticationPrincipal Jwt jwt) {
         return incidentService.getCurrentCitizenIncidents(jwt);
+    }
+
+    @PatchMapping("/{id}/status")
+    @Operation(
+            summary = "Update incident status",
+            description = """
+                    Updates lifecycle status for an incident. Private endpoint for ROLE_ADMIN users. \
+                    Also records a new status history entry when status changes.
+                    """,
+            security = @SecurityRequirement(name = "BearerAuth")
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Incident status updated",
+                    content = @Content(schema = @Schema(implementation = IncidentDto.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request body",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing or invalid Firebase JWT",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Requires ROLE_ADMIN",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Incident not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Unexpected server error",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
+    })
+    public IncidentDto updateIncidentStatus(
+            @PathVariable
+            @Parameter(description = "Incident identifier (UUID)", example = "550e8400-e29b-41d4-a716-446655440000")
+            String id,
+            @RequestBody @Schema(implementation = UpdateIncidentStatusRequest.class)
+            UpdateIncidentStatusRequest request,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return incidentService.updateIncidentStatus(id, request, jwt);
+    }
+
+    @PatchMapping("/{id}/priority")
+    @Operation(
+            summary = "Update incident priority",
+            description = "Updates administrative priority level for an incident. Private endpoint for ROLE_ADMIN users.",
+            security = @SecurityRequirement(name = "BearerAuth")
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Incident priority updated",
+                    content = @Content(schema = @Schema(implementation = IncidentDto.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request body",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing or invalid Firebase JWT",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Requires ROLE_ADMIN",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Incident not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Unexpected server error",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
+    })
+    public IncidentDto updateIncidentPriority(
+            @PathVariable
+            @Parameter(description = "Incident identifier (UUID)", example = "550e8400-e29b-41d4-a716-446655440000")
+            String id,
+            @RequestBody @Schema(implementation = UpdateIncidentPriorityRequest.class)
+            UpdateIncidentPriorityRequest request
+    ) {
+        return incidentService.updateIncidentPriority(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(
+            summary = "Delete an incident",
+            description = """
+                    Deletes an incident by id. Requires Bearer JWT with role CITIZEN or ADMIN. \
+                    Incident must be in NEW status to be deleted (for both ADMIN and CITIZEN). \
+                    Citizen users can delete only their own incidents.
+                    """,
+            security = @SecurityRequirement(name = "BearerAuth")
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Incident deleted successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing or invalid Firebase JWT",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Authenticated user is not allowed to delete this incident",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Incident not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Incident can only be deleted when status is NEW",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Unexpected server error",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
+    })
+    public void deleteIncident(
+            @PathVariable
+            @Parameter(description = "Incident identifier (UUID)", example = "550e8400-e29b-41d4-a716-446655440000")
+            String id,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        incidentService.deleteIncident(id, jwt);
     }
 }

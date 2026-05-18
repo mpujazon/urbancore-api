@@ -49,9 +49,6 @@ public class Incident {
     private String addressLabel;
 
     @Column(columnDefinition = "TEXT")
-    private String area;
-
-    @Column(columnDefinition = "TEXT")
     private String city;
 
     @Column(nullable = false, columnDefinition = "TEXT")
@@ -59,6 +56,9 @@ public class Incident {
 
     @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<IncidentImage> images = new ArrayList<>();
+    
+    @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PlannedAction> plannedActions = new ArrayList<>();
 
     @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<IncidentStatusHistory> statusHistory = new ArrayList<>();
@@ -173,14 +173,6 @@ public class Incident {
         this.addressLabel = addressLabel;
     }
 
-    public String getArea() {
-        return area;
-    }
-
-    public void setArea(String area) {
-        this.area = area;
-    }
-
     public String getCity() {
         return city;
     }
@@ -207,6 +199,14 @@ public class Incident {
 
     public List<IncidentStatusHistory> getStatusHistory() {
         return statusHistory;
+    }
+
+    public List<PlannedAction> getPlannedActions() {
+        return plannedActions;
+    }
+
+    public void setPlannedActions(List<PlannedAction> plannedActions) {
+        this.plannedActions = plannedActions;
     }
 
     public void setStatusHistory(List<IncidentStatusHistory> statusHistory) {
