@@ -5,7 +5,6 @@ import com.urbancore.urbancore_api.models.PlannedActionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.Instant;
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import com.urbancore.plannedactions.domain.PlannedAction;
