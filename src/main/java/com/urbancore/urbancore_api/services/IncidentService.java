@@ -75,7 +75,7 @@ public class IncidentService {
 
         IncidentStatusHistory initialHistory = new IncidentStatusHistory();
         initialHistory.setId(UUID.randomUUID().toString());
-        initialHistory.setFromStatus(IncidentStatus.NEW);
+        initialHistory.setFromStatus(null);
         initialHistory.setToStatus(IncidentStatus.NEW);
         initialHistory.setChangedBy(String.valueOf(reporter.getId()));
         initialHistory.setChangedAt(Instant.now());
