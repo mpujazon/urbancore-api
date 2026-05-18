@@ -52,7 +52,7 @@ public class PlannedActionController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Create planned action",
-            description = "Creates a planned action for an incident. Private endpoint for ROLE_ADMIN users.",
+            description = "Creates a planned action for an incident. Private endpoint for ROLE_ADMIN users. Incidents in CANCELLED, REJECTED, or RESOLVED cannot be modified.",
             security = @SecurityRequirement(name = "BearerAuth")
     )
     @ApiResponses(value = {
@@ -61,6 +61,7 @@ public class PlannedActionController {
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "Requires ROLE_ADMIN", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Incident or user not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Incident cannot be modified in CANCELLED, REJECTED, or RESOLVED status", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "Unexpected server error", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     public PlannedActionResponse create(
@@ -117,7 +118,7 @@ public class PlannedActionController {
     @PatchMapping("/{id}")
     @Operation(
             summary = "Update planned action",
-            description = "Updates editable fields and/or status for a planned action. Private endpoint for ROLE_ADMIN users.",
+            description = "Updates editable fields and/or status for a planned action. Private endpoint for ROLE_ADMIN users. Incidents in CANCELLED, REJECTED, or RESOLVED cannot be modified.",
             security = @SecurityRequirement(name = "BearerAuth")
     )
     @ApiResponses(value = {
@@ -126,22 +127,25 @@ public class PlannedActionController {
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "Requires ROLE_ADMIN", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Planned action or assigned user not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Incident cannot be modified in CANCELLED, REJECTED, or RESOLVED status", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "Unexpected server error", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     public PlannedActionResponse update(
             @PathVariable
             @Parameter(description = "Planned action id", example = "0bf9f563-40f6-4f39-b580-f857f273f553")
             UUID id,
-            @Valid @RequestBody UpdatePlannedActionRequest request
+            @Valid @RequestBody UpdatePlannedActionRequest request,
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        return plannedActionService.update(id, request);
+        User currentUser = currentUserService.getCurrentUser(jwt);
+        return plannedActionService.update(id, request, currentUser.getId());
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(
             summary = "Delete planned action",
-            description = "Deletes a planned action. Private endpoint for ROLE_ADMIN users.",
+            description = "Deletes a planned action. Private endpoint for ROLE_ADMIN users. Incidents in CANCELLED, REJECTED, or RESOLVED cannot be modified.",
             security = @SecurityRequirement(name = "BearerAuth")
     )
     @ApiResponses(value = {
@@ -149,13 +153,16 @@ public class PlannedActionController {
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "Requires ROLE_ADMIN", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Planned action not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Incident cannot be modified in CANCELLED, REJECTED, or RESOLVED status", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "Unexpected server error", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     public void delete(
             @PathVariable
             @Parameter(description = "Planned action id", example = "0bf9f563-40f6-4f39-b580-f857f273f553")
-            UUID id
+            UUID id,
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        plannedActionService.delete(id);
+        User currentUser = currentUserService.getCurrentUser(jwt);
+        plannedActionService.delete(id, currentUser.getId());
     }
 }
