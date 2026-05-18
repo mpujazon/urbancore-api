@@ -101,6 +101,36 @@ public class IncidentService {
         return publicIncidentMapper.toDetailResponse(incident);
     }
 
+    public void deleteIncident(String id, Jwt jwt) {
+        User currentUser = currentUserService.getCurrentUser(jwt);
+
+        Incident incident = incidentRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+
+        if (incident.getStatus() != IncidentStatus.NEW) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Only incidents in NEW status can be deleted"
+            );
+        }
+
+        boolean isAdmin = currentUser.getRole() == UserRole.ROLE_ADMIN;
+        if (isAdmin) {
+            incidentRepository.delete(incident);
+            return;
+        }
+
+        boolean isOwner = incident.getReporter() != null
+                && incident.getReporter().getId() != null
+                && incident.getReporter().getId().equals(currentUser.getId());
+
+        if (!isOwner) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to delete this incident");
+        }
+
+        incidentRepository.delete(incident);
+    }
+
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
             "createdAt", "updatedAt", "status", "priority", "category", "title"
     );
