@@ -1,8 +1,5 @@
-package com.urbancore.plannedactions.domain;
+package com.urbancore.urbancore_api.models;
 
-import com.urbancore.urbancore_api.models.Incident;
-import com.urbancore.urbancore_api.models.PlannedActionStatus;
-import com.urbancore.urbancore_api.models.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -61,7 +58,6 @@ public class PlannedAction {
     private Instant updatedAt;
 
     protected PlannedAction() {
-        // Required by JPA
     }
 
     public PlannedAction(
@@ -155,5 +151,9 @@ public class PlannedAction {
 
     public void changeStatus(PlannedActionStatus status) {
         this.status = status;
+    }
+
+    public void cancel() {
+        this.status = PlannedActionStatus.CANCELLED;
     }
 }
