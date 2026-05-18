@@ -7,8 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import com.urbancore.plannedactions.domain.PlannedAction;
-
 @Entity
 @Table(name = "incidents")
 public class Incident {
@@ -201,6 +199,14 @@ public class Incident {
 
     public List<IncidentStatusHistory> getStatusHistory() {
         return statusHistory;
+    }
+
+    public List<PlannedAction> getPlannedActions() {
+        return plannedActions;
+    }
+
+    public void setPlannedActions(List<PlannedAction> plannedActions) {
+        this.plannedActions = plannedActions;
     }
 
     public void setStatusHistory(List<IncidentStatusHistory> statusHistory) {
