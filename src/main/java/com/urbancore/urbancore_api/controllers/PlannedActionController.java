@@ -3,12 +3,15 @@ package com.urbancore.urbancore_api.controllers;
 import com.urbancore.urbancore_api.dtos.ApiErrorResponse;
 import com.urbancore.urbancore_api.dtos.CreatePlannedActionRequest;
 import com.urbancore.urbancore_api.dtos.PlannedActionResponse;
+import com.urbancore.urbancore_api.dtos.PublicPlannedActionCalendarItemResponse;
 import com.urbancore.urbancore_api.dtos.UpdatePlannedActionRequest;
+import com.urbancore.urbancore_api.models.PlannedActionStatus;
 import com.urbancore.urbancore_api.models.User;
 import com.urbancore.urbancore_api.services.CurrentUserService;
 import com.urbancore.urbancore_api.services.PlannedActionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -16,7 +19,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -31,7 +33,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -74,28 +75,34 @@ public class PlannedActionController {
 
     @GetMapping
     @Operation(
-            summary = "List planned actions by city and date range",
-            description = "Returns planned actions filtered by cityId and scheduled start date range. Public endpoint."
+            summary = "List public planned actions for calendar",
+            description = """
+                    Returns public-safe planned actions for a date range.
+                    This endpoint is public and does not require authentication.
+                    It excludes internal/admin-only fields and only returns incident reference data needed for navigation.
+                    """
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Planned actions found", content = @Content(schema = @Schema(implementation = PlannedActionResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid query parameters", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Public planned actions found",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = PublicPlannedActionCalendarItemResponse.class)))
+            ),
+            @ApiResponse(responseCode = "400", description = "Invalid query parameters or invalid date range", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "Unexpected server error", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
-    public List<PlannedActionResponse> findByCityAndDateRange(
-            @RequestParam
-            @Parameter(description = "City identifier", example = "bcn-001")
-            String cityId,
-            @RequestParam
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            @Parameter(description = "Range start (ISO-8601)", example = "2026-06-01T00:00:00Z")
-            Instant from,
-            @RequestParam
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            @Parameter(description = "Range end (ISO-8601)", example = "2026-06-30T23:59:59Z")
-            Instant to
+    public List<PublicPlannedActionCalendarItemResponse> findByCityAndDateRange(
+            @RequestParam(required = false)
+            @Parameter(description = "Range start (ISO-8601 date or datetime)", example = "2026-05-01T00:00:00Z")
+            String dateFrom,
+            @RequestParam(required = false)
+            @Parameter(description = "Range end (ISO-8601 date or datetime)", example = "2026-05-31T23:59:59Z")
+            String dateTo,
+            @RequestParam(required = false)
+            @Parameter(description = "Optional planned action status filter", example = "PLANNED")
+            PlannedActionStatus status
     ) {
-        return plannedActionService.findByCityAndDateRange(cityId, from, to);
+        return plannedActionService.findPublicCalendarActions(dateFrom, dateTo, status);
     }
 
     @GetMapping("/incident/{incidentId}")

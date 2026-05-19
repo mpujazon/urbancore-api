@@ -2,6 +2,7 @@ package com.urbancore.urbancore_api.services;
 
 import com.urbancore.urbancore_api.dtos.CreatePlannedActionRequest;
 import com.urbancore.urbancore_api.dtos.PlannedActionResponse;
+import com.urbancore.urbancore_api.dtos.PublicPlannedActionCalendarItemResponse;
 import com.urbancore.urbancore_api.dtos.UpdatePlannedActionRequest;
 import com.urbancore.urbancore_api.mappers.PlannedActionMapper;
 import com.urbancore.urbancore_api.models.Incident;
@@ -19,12 +20,18 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 public class PlannedActionService {
+
+    private static final long MAX_PUBLIC_CALENDAR_RANGE_DAYS = 366;
 
     private final PlannedActionRepository plannedActionRepository;
     private final IncidentRepository incidentRepository;
@@ -125,16 +132,17 @@ public class PlannedActionService {
     }
 
     @Transactional(readOnly = true)
-    public List<PlannedActionResponse> findByCityAndDateRange(String cityId, Instant from, Instant to) {
-        if (from == null || to == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "from and to are required");
-        }
-        if (!to.isAfter(from)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "to must be after from");
-        }
+    public List<PublicPlannedActionCalendarItemResponse> findPublicCalendarActions(
+            String dateFrom,
+            String dateTo,
+            PlannedActionStatus status
+    ) {
+        Instant from = parseDateFrom(dateFrom);
+        Instant to = parseDateTo(dateTo);
+        validatePublicDateRange(from, to);
 
-        return plannedActionRepository.findByIncidentCityIdAndScheduledStartBetween(cityId, from, to).stream()
-                .map(plannedActionMapper::toResponse)
+        return plannedActionRepository.findPublicCalendarActions(from, to, status, IncidentStatus.NULL).stream()
+                .map(plannedActionMapper::toPublicCalendarItemResponse)
                 .toList();
     }
 
@@ -201,5 +209,59 @@ public class PlannedActionService {
                     "Incident cannot be modified when status is CANCELLED, REJECTED, or RESOLVED"
             );
         }
+    }
+
+    private Instant parseDateFrom(String rawDateFrom) {
+        if (rawDateFrom == null || rawDateFrom.isBlank()) {
+            throw badRequest("PLANNED_ACTION_INVALID_DATE_RANGE", "dateFrom is required");
+        }
+
+        return parseDateOrDateTime(rawDateFrom.trim(), false);
+    }
+
+    private Instant parseDateTo(String rawDateTo) {
+        if (rawDateTo == null || rawDateTo.isBlank()) {
+            throw badRequest("PLANNED_ACTION_INVALID_DATE_RANGE", "dateTo is required");
+        }
+
+        return parseDateOrDateTime(rawDateTo.trim(), true);
+    }
+
+    private Instant parseDateOrDateTime(String rawValue, boolean isDateTo) {
+        try {
+            return Instant.parse(rawValue);
+        } catch (DateTimeParseException ignored) {
+        }
+
+        try {
+            return OffsetDateTime.parse(rawValue).toInstant();
+        } catch (DateTimeParseException ignored) {
+        }
+
+        try {
+            LocalDate asDate = LocalDate.parse(rawValue);
+            if (isDateTo) {
+                return asDate.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+            }
+            return asDate.atStartOfDay().toInstant(ZoneOffset.UTC);
+        } catch (DateTimeParseException ignored) {
+        }
+
+        throw badRequest("PLANNED_ACTION_INVALID_DATE_RANGE", "date parameters must be valid ISO-8601 values");
+    }
+
+    private void validatePublicDateRange(Instant dateFrom, Instant dateTo) {
+        if (!dateTo.isAfter(dateFrom)) {
+            throw badRequest("PLANNED_ACTION_INVALID_DATE_RANGE", "dateFrom must be before dateTo");
+        }
+
+        long days = java.time.Duration.between(dateFrom, dateTo).toDays();
+        if (days > MAX_PUBLIC_CALENDAR_RANGE_DAYS) {
+            throw badRequest("PLANNED_ACTION_DATE_RANGE_TOO_LARGE", "date range cannot exceed 12 months");
+        }
+    }
+
+    private ResponseStatusException badRequest(String code, String message) {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, code + ": " + message);
     }
 }
