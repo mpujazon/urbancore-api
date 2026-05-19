@@ -2,7 +2,10 @@ package com.urbancore.urbancore_api.repositories;
 
 import com.urbancore.urbancore_api.dtos.IncidentFilterDto;
 import com.urbancore.urbancore_api.models.Incident;
+import com.urbancore.urbancore_api.models.User;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import org.springframework.data.jpa.domain.Specification;
 
 public class IncidentSpecification {
@@ -34,6 +37,32 @@ public class IncidentSpecification {
                 Predicate titleLike = cb.like(cb.lower(root.get("title")), pattern);
                 Predicate descLike = cb.like(cb.lower(root.get("description")), pattern);
                 return cb.or(titleLike, descLike);
+            });
+        }
+
+        return spec;
+    }
+
+    public static Specification<Incident> withAdminFilters(IncidentFilterDto filters) {
+        Specification<Incident> spec = withFilters(new IncidentFilterDto(
+                filters.status(),
+                filters.category(),
+                filters.priority(),
+                null,
+                filters.from(),
+                filters.to(),
+                null
+        ));
+
+        if (filters.q() != null && !filters.q().isBlank()) {
+            String pattern = "%" + filters.q().toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> {
+                Join<Incident, User> reporter = root.join("reporter", JoinType.LEFT);
+                Predicate titleLike = cb.like(cb.lower(root.get("title")), pattern);
+                Predicate idLike = cb.like(cb.lower(root.get("id")), pattern);
+                Predicate reporterEmailLike = cb.like(cb.lower(reporter.get("email")), pattern);
+                Predicate reporterIdLike = cb.like(cb.lower(cb.toString(reporter.get("id"))), pattern);
+                return cb.or(titleLike, idLike, reporterEmailLike, reporterIdLike);
             });
         }
 
