@@ -2,9 +2,11 @@ package com.urbancore.urbancore_api.services;
 
 import com.urbancore.urbancore_api.dtos.*;
 import com.urbancore.urbancore_api.mappers.PublicIncidentMapper;
+import com.urbancore.urbancore_api.mappers.PlannedActionMapper;
 import com.urbancore.urbancore_api.models.*;
 import com.urbancore.urbancore_api.repositories.IncidentRepository;
 import com.urbancore.urbancore_api.repositories.IncidentSpecification;
+import com.urbancore.urbancore_api.repositories.projections.IncidentPlannedActionsCountProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -16,8 +18,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -28,15 +34,18 @@ public class IncidentService {
     private final IncidentRepository incidentRepository;
     private final CurrentUserService currentUserService;
     private final PublicIncidentMapper publicIncidentMapper;
+    private final PlannedActionMapper plannedActionMapper;
 
     public IncidentService(
             IncidentRepository incidentRepository,
             CurrentUserService currentUserService,
-            PublicIncidentMapper publicIncidentMapper
+            PublicIncidentMapper publicIncidentMapper,
+            PlannedActionMapper plannedActionMapper
     ) {
         this.incidentRepository = incidentRepository;
         this.currentUserService = currentUserService;
         this.publicIncidentMapper = publicIncidentMapper;
+        this.plannedActionMapper = plannedActionMapper;
     }
 
     public IncidentDto createIncident(CreateIncidentRequest request, Jwt jwt) {
@@ -195,6 +204,9 @@ public class IncidentService {
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
             "createdAt", "updatedAt", "status", "priority", "category", "title"
     );
+    private static final Set<String> ALLOWED_ADMIN_SORT_FIELDS = Set.of(
+            "createdAt", "title", "category", "priority", "status"
+    );
 
     private static final int MAX_PAGE_SIZE = 50;
 
@@ -233,6 +245,118 @@ public class IncidentService {
         );
     }
 
+    public PagedResponseDto<AdminIncidentListItemDto> getAdminIncidents(
+            int page,
+            int size,
+            String sortParam,
+            String search,
+            IncidentStatus status,
+            IncidentCategory category,
+            IncidentPriority priority,
+            String dateFrom,
+            String dateTo
+    ) {
+        validateAdminPagination(page, size);
+        Sort sort = parseAdminSort(sortParam);
+
+        Instant from = parseDateFrom(dateFrom);
+        Instant to = parseDateTo(dateTo);
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dateFrom must be before or equal to dateTo");
+        }
+
+        IncidentFilterDto filters = new IncidentFilterDto(status, category, priority, null, from, to, search);
+        Specification<Incident> spec = IncidentSpecification.withAdminFilters(filters);
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<Incident> resultPage = incidentRepository.findAll(spec, pageable);
+        Map<String, Long> plannedActionsByIncidentId = loadPlannedActionsCount(resultPage.getContent());
+
+        List<AdminIncidentListItemDto> content = resultPage.getContent().stream()
+                .map(incident -> toAdminListItemDto(incident, plannedActionsByIncidentId.getOrDefault(incident.getId(), 0L)))
+                .toList();
+
+        List<SortDto> sortDtos = sort.stream()
+                .map(o -> new SortDto(o.getProperty(), o.getDirection().name().toLowerCase()))
+                .toList();
+
+        return new PagedResponseDto<>(
+                content,
+                resultPage.getNumber(),
+                resultPage.getSize(),
+                resultPage.getTotalElements(),
+                resultPage.getTotalPages(),
+                resultPage.isFirst(),
+                resultPage.isLast(),
+                sortDtos
+        );
+    }
+
+    public AdminIncidentDetailResponse getAdminIncidentDetailById(String id) {
+        Incident incident = incidentRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+
+        IncidentReporterDto reporterDto = null;
+        if (incident.getReporter() != null) {
+            reporterDto = new IncidentReporterDto(
+                    String.valueOf(incident.getReporter().getId()),
+                    incident.getReporter().getEmail(),
+                    incident.getReporter().getRole()
+            );
+        }
+
+        IncidentLocationDto locationDto = new IncidentLocationDto(
+                incident.getLat(),
+                incident.getLng(),
+                incident.getAddressLabel(),
+                incident.getCity(),
+                incident.getGeohash()
+        );
+
+        List<IncidentImageDto> imageDtos = incident.getImages().stream()
+                .map(i -> new IncidentImageDto(
+                        i.getId(),
+                        i.getUrl(),
+                        i.getThumbnailUrl(),
+                        i.getPublicId(),
+                        i.getMimeType(),
+                        i.getSizeKb()
+                ))
+                .toList();
+
+        List<PlannedActionResponse> plannedActionResponses = incident.getPlannedActions().stream()
+                .map(plannedActionMapper::toResponse)
+                .toList();
+
+        List<IncidentStatusHistoryDto> statusHistoryDtos = incident.getStatusHistory().stream()
+                .map(h -> new IncidentStatusHistoryDto(
+                        h.getId(),
+                        h.getFromStatus(),
+                        h.getToStatus(),
+                        h.getChangedBy(),
+                        h.getReason(),
+                        h.getChangedAt().toString()
+                ))
+                .toList();
+
+        return new AdminIncidentDetailResponse(
+                incident.getId(),
+                incident.getTitle(),
+                incident.getDescription(),
+                incident.getCategory(),
+                incident.getStatus(),
+                incident.getPriority(),
+                incident.getCityId(),
+                reporterDto,
+                locationDto,
+                imageDtos,
+                plannedActionResponses,
+                statusHistoryDtos,
+                incident.getCreatedAt().toString(),
+                incident.getUpdatedAt().toString()
+        );
+    }
+
     private Sort parseSort(String sortParam) {
         if (sortParam == null || sortParam.isBlank()) {
             return Sort.by(Sort.Direction.DESC, "createdAt");
@@ -252,6 +376,112 @@ public class IncidentService {
 
         Sort.Direction direction = "ASC".equals(rawDirection) ? Sort.Direction.ASC : Sort.Direction.DESC;
         return Sort.by(direction, field);
+    }
+
+    private void validateAdminPagination(int page, int size) {
+        if (page < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page must not be negative");
+        }
+        if (!Set.of(10, 25, 50).contains(size)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "size must be one of: 10, 25, 50");
+        }
+    }
+
+    private Sort parseAdminSort(String sortParam) {
+        if (sortParam == null || sortParam.isBlank()) {
+            return Sort.by(Sort.Direction.DESC, "createdAt");
+        }
+
+        String[] parts = sortParam.split(",");
+        String field = parts[0].trim();
+        String rawDirection = parts.length > 1 ? parts[1].trim().toLowerCase() : "desc";
+
+        if (!ALLOWED_ADMIN_SORT_FIELDS.contains(field)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sort field must be one of: createdAt, title, category, priority, status");
+        }
+        if (!"asc".equals(rawDirection) && !"desc".equals(rawDirection)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sort direction must be 'asc' or 'desc'");
+        }
+
+        Sort.Direction direction = "asc".equals(rawDirection) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        return Sort.by(direction, field);
+    }
+
+    private Instant parseDateFrom(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Instant.parse(value);
+        } catch (Exception ignored) {
+        }
+
+        try {
+            return LocalDate.parse(value).atStartOfDay().toInstant(ZoneOffset.UTC);
+        } catch (Exception ignored) {
+        }
+
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dateFrom must be ISO-8601 date-time or yyyy-MM-dd");
+    }
+
+    private Instant parseDateTo(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Instant.parse(value);
+        } catch (Exception ignored) {
+        }
+
+        try {
+            return LocalDate.parse(value).plusDays(1).atStartOfDay().minusNanos(1).toInstant(ZoneOffset.UTC);
+        } catch (Exception ignored) {
+        }
+
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dateTo must be ISO-8601 date-time or yyyy-MM-dd");
+    }
+
+    private Map<String, Long> loadPlannedActionsCount(List<Incident> incidents) {
+        if (incidents.isEmpty()) {
+            return Map.of();
+        }
+
+        List<String> incidentIds = incidents.stream().map(Incident::getId).toList();
+        List<IncidentPlannedActionsCountProjection> rows = incidentRepository.countPlannedActionsByIncidentIds(incidentIds);
+        Map<String, Long> counts = new HashMap<>();
+        for (IncidentPlannedActionsCountProjection row : rows) {
+            counts.put(row.getIncidentId(), row.getPlannedActionsCount());
+        }
+        return counts;
+    }
+
+    private AdminIncidentListItemDto toAdminListItemDto(Incident incident, long linkedPlannedActionsCount) {
+        String thumbnailUrl = null;
+        if (incident.getImages() != null && !incident.getImages().isEmpty()) {
+            thumbnailUrl = incident.getImages().get(0).getThumbnailUrl();
+        }
+
+        String reporterId = null;
+        String reporterDisplayName = null;
+        if (incident.getReporter() != null && incident.getReporter().getId() != null) {
+            reporterId = String.valueOf(incident.getReporter().getId());
+            reporterDisplayName = incident.getReporter().getEmail();
+        }
+
+        return new AdminIncidentListItemDto(
+                incident.getId(),
+                incident.getTitle(),
+                incident.getCategory(),
+                incident.getStatus(),
+                incident.getPriority(),
+                incident.getCityId(),
+                reporterId,
+                reporterDisplayName,
+                thumbnailUrl,
+                incident.getCreatedAt().toString(),
+                incident.getUpdatedAt().toString(),
+                linkedPlannedActionsCount
+        );
     }
 
     private IncidentListItemDto toListItemDto(Incident incident) {

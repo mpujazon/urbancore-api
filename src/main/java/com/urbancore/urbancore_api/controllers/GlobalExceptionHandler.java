@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -59,6 +60,15 @@ public class GlobalExceptionHandler {
         String traceId = UUID.randomUUID().toString().substring(0, 10);
         String fieldName = ex.getName() != null ? ex.getName() : "query parameter";
         String message = "Invalid value for parameter '" + fieldName + "'";
+
+        if (ex.getRequiredType() != null && ex.getRequiredType().isEnum()) {
+            String acceptedValues = Arrays.stream(ex.getRequiredType().getEnumConstants())
+                    .map(String::valueOf)
+                    .filter(value -> !"NULL".equals(value))
+                    .reduce((left, right) -> left + ", " + right)
+                    .orElse("");
+            message = "Invalid value for parameter '" + fieldName + "'. Allowed values: " + acceptedValues;
+        }
 
         ApiErrorResponse body = new ApiErrorResponse(
                 Instant.now().toString(),

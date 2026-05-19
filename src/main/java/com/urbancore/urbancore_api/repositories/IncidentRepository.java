@@ -6,6 +6,7 @@ import com.urbancore.urbancore_api.models.IncidentStatus;
 import com.urbancore.urbancore_api.repositories.projections.AreaCountProjection;
 import com.urbancore.urbancore_api.repositories.projections.CategoryCountProjection;
 import com.urbancore.urbancore_api.repositories.projections.DailyIncidentCountProjection;
+import com.urbancore.urbancore_api.repositories.projections.IncidentPlannedActionsCountProjection;
 import com.urbancore.urbancore_api.repositories.projections.StatusCountProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -13,6 +14,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 
 public interface IncidentRepository extends JpaRepository<Incident, String>, JpaSpecificationExecutor<Incident> {
@@ -226,5 +228,16 @@ public interface IncidentRepository extends JpaRepository<Incident, String>, Jpa
             @Param("category") IncidentCategory category,
             @Param("applyStatus") boolean applyStatus,
             @Param("status") IncidentStatus status
+    );
+
+    @Query("""
+            SELECT i.id AS incidentId, COUNT(pa.id) AS plannedActionsCount
+            FROM Incident i
+            LEFT JOIN i.plannedActions pa
+            WHERE i.id IN :incidentIds
+            GROUP BY i.id
+            """)
+    List<IncidentPlannedActionsCountProjection> countPlannedActionsByIncidentIds(
+            @Param("incidentIds") Collection<String> incidentIds
     );
 }
