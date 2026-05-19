@@ -40,6 +40,7 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.GET, "/api/planned-actions").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/planned-actions/incident/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/stats/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/planned-actions").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/planned-actions/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/planned-actions/*").hasRole("ADMIN")
