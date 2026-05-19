@@ -8,7 +8,13 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "incidents")
+@Table(name = "incidents", indexes = {
+        @Index(name = "idx_incidents_created_at", columnList = "createdAt"),
+        @Index(name = "idx_incidents_status", columnList = "status"),
+        @Index(name = "idx_incidents_category", columnList = "category"),
+        @Index(name = "idx_incidents_priority", columnList = "priority"),
+        @Index(name = "idx_incidents_reporter_id", columnList = "reporter_id")
+})
 public class Incident {
 
     @Id
