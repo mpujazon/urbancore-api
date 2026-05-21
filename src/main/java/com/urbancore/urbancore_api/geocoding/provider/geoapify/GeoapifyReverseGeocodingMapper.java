@@ -9,7 +9,8 @@ public class GeoapifyReverseGeocodingMapper {
     private static final String PROVIDER = "geoapify";
 
     public ReverseGeocodingResponse toNormalized(double requestedLat, double requestedLng,
-                                                 GeoapifyReverseGeocodingResult source) {
+                                                 GeoapifyReverseGeocodingResult source,
+                                                 String citySlug) {
         return new ReverseGeocodingResponse(
                 source.lat() != null ? source.lat() : requestedLat,
                 source.lng() != null ? source.lng() : requestedLng,
@@ -19,6 +20,7 @@ public class GeoapifyReverseGeocodingMapper {
                 source.houseNumber(),
                 source.postcode(),
                 source.city(),
+                citySlug,
                 source.country(),
                 source.countryCode(),
                 source.suburb(),
