@@ -16,10 +16,12 @@ class GeoapifyReverseGeocodingMapperTest {
                 2.1686,
                 "Placa de Catalunya, 1, 08002 Barcelona, Spain",
                 "Placa de Catalunya",
+                "Placa de Catalunya",
                 "1",
                 "08002",
                 "Barcelona",
                 "Spain",
+                null,
                 "es"
         );
 
@@ -43,6 +45,8 @@ class GeoapifyReverseGeocodingMapperTest {
                 null,
                 null,
                 "Address",
+                null,
+                null,
                 null,
                 null,
                 null,
