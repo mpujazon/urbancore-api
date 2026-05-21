@@ -11,6 +11,7 @@ public record GeoapifyReverseGeocodingResult(
         String postcode,
         String city,
         String country,
+        String suburb,
         @JsonProperty("country_code") String countryCode
 ) {
 }

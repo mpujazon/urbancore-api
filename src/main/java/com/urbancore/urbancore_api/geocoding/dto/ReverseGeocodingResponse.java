@@ -22,6 +22,8 @@ public record ReverseGeocodingResponse(
         String country,
         @Schema(description = "ISO 3166-1 alpha-2 country code", example = "es")
         String countryCode,
+        @Schema(description = "Suburb name", example = "el Parc i la Llacuna del Poblenou")
+        String suburb,
         @Schema(description = "Geocoding provider used by backend", example = "geoapify")
         String provider
 ) {

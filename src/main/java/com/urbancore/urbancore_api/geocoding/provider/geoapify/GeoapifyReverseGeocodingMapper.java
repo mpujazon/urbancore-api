@@ -20,6 +20,7 @@ public class GeoapifyReverseGeocodingMapper {
                 source.city(),
                 source.country(),
                 source.countryCode(),
+                source.suburb(),
                 PROVIDER
         );
     }
