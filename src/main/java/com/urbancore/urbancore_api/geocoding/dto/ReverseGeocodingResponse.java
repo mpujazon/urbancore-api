@@ -10,6 +10,8 @@ public record ReverseGeocodingResponse(
         double lng,
         @Schema(description = "Human-readable full address label", example = "Placa de Catalunya, 1, 08002 Barcelona, Spain")
         String addressLabel,
+        @Schema(description = "Human-readable address label", example = "Placa de Catalunya, 1")
+        String addressLine1,
         @Schema(description = "Street name", example = "Placa de Catalunya")
         String street,
         @Schema(description = "Street house number", example = "1")

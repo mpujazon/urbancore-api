@@ -14,6 +14,7 @@ public class GeoapifyReverseGeocodingMapper {
                 source.lat() != null ? source.lat() : requestedLat,
                 source.lng() != null ? source.lng() : requestedLng,
                 source.addressLabel(),
+                source.addressLine1(),
                 source.street(),
                 source.houseNumber(),
                 source.postcode(),

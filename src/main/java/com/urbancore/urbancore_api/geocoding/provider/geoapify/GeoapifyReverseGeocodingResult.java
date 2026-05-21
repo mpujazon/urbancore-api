@@ -6,6 +6,7 @@ public record GeoapifyReverseGeocodingResult(
         Double lat,
         @JsonProperty("lon") Double lng,
         @JsonProperty("formatted") String addressLabel,
+        @JsonProperty("address_line1") String addressLine1,
         String street,
         @JsonProperty("housenumber") String houseNumber,
         String postcode,
