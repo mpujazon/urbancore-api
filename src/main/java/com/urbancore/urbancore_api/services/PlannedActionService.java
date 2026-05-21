@@ -133,17 +133,26 @@ public class PlannedActionService {
 
     @Transactional(readOnly = true)
     public List<PublicPlannedActionCalendarItemResponse> findPublicCalendarActions(
+            String cityId,
             String dateFrom,
             String dateTo,
             PlannedActionStatus status
     ) {
+        String normalizedCityId = normalizeCityId(cityId);
         Instant from = parseDateFrom(dateFrom);
         Instant to = parseDateTo(dateTo);
         validatePublicDateRange(from, to);
 
-        return plannedActionRepository.findPublicCalendarActions(from, to, status, IncidentStatus.NULL).stream()
+        return plannedActionRepository.findPublicCalendarActions(normalizedCityId != null, normalizedCityId, from, to, status, IncidentStatus.NULL).stream()
                 .map(plannedActionMapper::toPublicCalendarItemResponse)
                 .toList();
+    }
+
+    private String normalizeCityId(String cityId) {
+        if (cityId == null || cityId.isBlank()) {
+            return null;
+        }
+        return cityId.trim();
     }
 
     private User resolveAssignedUser(Long assignedToUserId) {

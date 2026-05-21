@@ -77,7 +77,7 @@ public class PlannedActionController {
     @Operation(
             summary = "List public planned actions for calendar",
             description = """
-                    Returns public-safe planned actions for a date range.
+                    Returns public-safe planned actions for a city and date range.
                     This endpoint is public and does not require authentication.
                     It excludes internal/admin-only fields and only returns incident reference data needed for navigation.
                     """
@@ -93,6 +93,9 @@ public class PlannedActionController {
     })
     public List<PublicPlannedActionCalendarItemResponse> findByCityAndDateRange(
             @RequestParam(required = false)
+            @Parameter(description = "Optional city identifier to filter planned actions by. If omitted, public planned actions are returned globally.", example = "2f3c7a4e-9d2b-4f16-a51d-9d4b2f6e0c12")
+            String cityId,
+            @RequestParam(required = false)
             @Parameter(description = "Range start (ISO-8601 date or datetime)", example = "2026-05-01T00:00:00Z")
             String dateFrom,
             @RequestParam(required = false)
@@ -102,7 +105,7 @@ public class PlannedActionController {
             @Parameter(description = "Optional planned action status filter", example = "PLANNED")
             PlannedActionStatus status
     ) {
-        return plannedActionService.findPublicCalendarActions(dateFrom, dateTo, status);
+        return plannedActionService.findPublicCalendarActions(cityId, dateFrom, dateTo, status);
     }
 
     @GetMapping("/incident/{incidentId}")
