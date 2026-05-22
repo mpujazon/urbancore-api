@@ -16,6 +16,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,6 +41,7 @@ public class AdminIncidentController {
             description = """
                     Returns paginated incidents for /admin/incidents with server-side filters and sorting. \
                     Requires Bearer JWT with ROLE_ADMIN. \
+                    Results are automatically scoped to the admin assigned cityId. \
                     Filters are combined with AND logic. \
                     Search is case-insensitive and matches title, incident id, reporter id and reporter email.
                     """,
@@ -48,7 +51,7 @@ public class AdminIncidentController {
             @ApiResponse(responseCode = "200", description = "Admin incident list page", content = @Content(schema = @Schema(implementation = PagedResponseDto.class))),
             @ApiResponse(responseCode = "400", description = "Invalid query parameters", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Requires ROLE_ADMIN", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Requires ROLE_ADMIN and assigned cityId", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "Unexpected server error", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     public PagedResponseDto<AdminIncidentListItemDto> getAdminIncidents(
@@ -86,29 +89,32 @@ public class AdminIncidentController {
 
             @RequestParam(required = false)
             @Parameter(description = "Inclusive upper bound for createdAt. Accepts ISO-8601 date-time or yyyy-MM-dd", example = "2026-05-19")
-            String dateTo
+            String dateTo,
+
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        return incidentService.getAdminIncidents(page, size, sort, search, status, category, priority, dateFrom, dateTo);
+        return incidentService.getAdminIncidents(page, size, sort, search, status, category, priority, dateFrom, dateTo, jwt);
     }
 
     @GetMapping("/{id}")
     @Operation(
             summary = "Get admin incident detail",
-            description = "Returns operational incident detail for /admin/incidents/:id, including reporter, images, planned actions and status history. Requires ROLE_ADMIN.",
+            description = "Returns operational incident detail for /admin/incidents/:id, including reporter, images, planned actions and status history. Requires ROLE_ADMIN and only allows incidents inside the admin assigned cityId.",
             security = @SecurityRequirement(name = "BearerAuth")
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Admin incident detail", content = @Content(schema = @Schema(implementation = AdminIncidentDetailResponse.class))),
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Requires ROLE_ADMIN", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Requires ROLE_ADMIN with access to the incident city", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Incident not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "Unexpected server error", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     public AdminIncidentDetailResponse getAdminIncidentById(
             @PathVariable
             @Parameter(description = "Incident identifier (UUID)", example = "550e8400-e29b-41d4-a716-446655440000")
-            String id
+            String id,
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        return incidentService.getAdminIncidentDetailById(id);
+        return incidentService.getAdminIncidentDetailById(id, jwt);
     }
 }

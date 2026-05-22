@@ -58,7 +58,9 @@ public class IncidentController {
                     Creates an urban incident with initial status NEW. \
                     The caller must be authenticated with role CITIZEN. \
                     Images must be uploaded to Cloudinary before calling this endpoint; \
-                    provide the returned Cloudinary identifiers in the images array.
+                    provide the returned Cloudinary identifiers in the images array. \
+                    Provide cityId when the city UUID is already known; otherwise provide citySlug \
+                    and the backend will link the incident to an existing city or create it first.
                     """,
             security = @SecurityRequirement(name = "BearerAuth")
     )
@@ -260,7 +262,7 @@ public class IncidentController {
     @Operation(
             summary = "Update incident status",
             description = """
-                    Updates lifecycle status for an incident. Private endpoint for ROLE_ADMIN users. \
+                    Updates lifecycle status for an incident. Private endpoint for ROLE_ADMIN users and limited to incidents in the admin assigned cityId. \
                     Also records a new status history entry when status changes.
                     """,
             security = @SecurityRequirement(name = "BearerAuth")
@@ -283,7 +285,7 @@ public class IncidentController {
             ),
             @ApiResponse(
                     responseCode = "403",
-                    description = "Requires ROLE_ADMIN",
+                    description = "Requires ROLE_ADMIN with access to the incident city",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
             ),
             @ApiResponse(
@@ -311,7 +313,7 @@ public class IncidentController {
     @PatchMapping("/{id}/priority")
     @Operation(
             summary = "Update incident priority",
-            description = "Updates administrative priority level for an incident. Private endpoint for ROLE_ADMIN users.",
+            description = "Updates administrative priority level for an incident. Private endpoint for ROLE_ADMIN users, limited to incidents in the admin assigned cityId.",
             security = @SecurityRequirement(name = "BearerAuth")
     )
     @ApiResponses(value = {
@@ -332,7 +334,7 @@ public class IncidentController {
             ),
             @ApiResponse(
                     responseCode = "403",
-                    description = "Requires ROLE_ADMIN",
+                    description = "Requires ROLE_ADMIN with access to the incident city",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
             ),
             @ApiResponse(
@@ -351,9 +353,10 @@ public class IncidentController {
             @Parameter(description = "Incident identifier (UUID)", example = "550e8400-e29b-41d4-a716-446655440000")
             String id,
             @RequestBody @Schema(implementation = UpdateIncidentPriorityRequest.class)
-            UpdateIncidentPriorityRequest request
+            UpdateIncidentPriorityRequest request,
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        return incidentService.updateIncidentPriority(id, request);
+        return incidentService.updateIncidentPriority(id, request, jwt);
     }
 
     @DeleteMapping("/{id}")
@@ -363,7 +366,8 @@ public class IncidentController {
             description = """
                     Deletes an incident by id. Requires Bearer JWT with role CITIZEN or ADMIN. \
                     Incident must be in NEW status to be deleted (for both ADMIN and CITIZEN). \
-                    Citizen users can delete only their own incidents.
+                    Citizen users can delete only their own incidents. \
+                    Admin users can delete only incidents in their assigned cityId.
                     """,
             security = @SecurityRequirement(name = "BearerAuth")
     )

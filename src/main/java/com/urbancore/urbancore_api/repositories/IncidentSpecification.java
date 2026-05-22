@@ -48,7 +48,7 @@ public class IncidentSpecification {
                 filters.status(),
                 filters.category(),
                 filters.priority(),
-                null,
+                filters.cityId(),
                 filters.from(),
                 filters.to(),
                 null

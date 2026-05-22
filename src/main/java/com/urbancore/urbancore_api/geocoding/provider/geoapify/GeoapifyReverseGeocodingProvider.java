@@ -47,7 +47,7 @@ public class GeoapifyReverseGeocodingProvider implements ReverseGeocodingProvide
             }
 
             GeoapifyReverseGeocodingResult firstResult = response.results().getFirst();
-            return mapper.toNormalized(lat, lng, firstResult);
+            return mapper.toNormalized(lat, lng, firstResult, response.citySlug());
         } catch (ResponseStatusException ex) {
             throw ex;
         } catch (RestClientException ex) {

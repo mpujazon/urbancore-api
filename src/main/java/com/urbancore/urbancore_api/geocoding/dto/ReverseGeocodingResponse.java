@@ -20,6 +20,8 @@ public record ReverseGeocodingResponse(
         String postcode,
         @Schema(description = "City or locality", example = "Barcelona")
         String city,
+        @Schema(description = "URL-safe city slug prefixed with ISO 3166-1 alpha-2 country code", example = "es-barcelona")
+        String citySlug,
         @Schema(description = "Country name", example = "Spain")
         String country,
         @Schema(description = "ISO 3166-1 alpha-2 country code", example = "es")
