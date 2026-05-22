@@ -20,8 +20,11 @@ public record CreateIncidentRequest(
         @Schema(description = "Suggested priority (defaults to UNDEFINED if omitted)", example = "MEDIUM")
         IncidentPriority priority,
 
-        @Schema(description = "City identifier where the incident occurred", example = "bcn-001")
+        @Schema(description = "City UUID where the incident occurred. If omitted, the backend resolves or creates the city using citySlug.", example = "2f3c7a4e-9d2b-4f16-a51d-9d4b2f6e0c12")
         String cityId,
+
+        @Schema(description = "URL-safe city slug used to find or create the city when cityId is omitted", example = "es-barcelona")
+        String citySlug,
 
         @Schema(description = "Geolocation details of the incident")
         IncidentLocationDto location,
