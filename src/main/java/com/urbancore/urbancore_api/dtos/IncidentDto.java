@@ -27,7 +27,7 @@ public record IncidentDto(
         @Schema(description = "Administrative priority level", example = "MEDIUM")
         IncidentPriority priority,
 
-        @Schema(description = "City identifier the incident belongs to", example = "bcn-001")
+        @Schema(description = "City UUID the incident belongs to", example = "2f3c7a4e-9d2b-4f16-a51d-9d4b2f6e0c12")
         String cityId,
 
         @Schema(description = "Reporter summary (public-safe)")

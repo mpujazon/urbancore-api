@@ -4,6 +4,7 @@ import com.urbancore.urbancore_api.dtos.*;
 import com.urbancore.urbancore_api.mappers.PublicIncidentMapper;
 import com.urbancore.urbancore_api.mappers.PlannedActionMapper;
 import com.urbancore.urbancore_api.models.*;
+import com.urbancore.urbancore_api.repositories.CityRepository;
 import com.urbancore.urbancore_api.repositories.IncidentRepository;
 import com.urbancore.urbancore_api.repositories.IncidentSpecification;
 import com.urbancore.urbancore_api.repositories.projections.IncidentPlannedActionsCountProjection;
@@ -15,6 +16,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -32,22 +34,26 @@ import java.util.UUID;
 public class IncidentService {
 
     private final IncidentRepository incidentRepository;
+    private final CityRepository cityRepository;
     private final CurrentUserService currentUserService;
     private final PublicIncidentMapper publicIncidentMapper;
     private final PlannedActionMapper plannedActionMapper;
 
     public IncidentService(
             IncidentRepository incidentRepository,
+            CityRepository cityRepository,
             CurrentUserService currentUserService,
             PublicIncidentMapper publicIncidentMapper,
             PlannedActionMapper plannedActionMapper
     ) {
         this.incidentRepository = incidentRepository;
+        this.cityRepository = cityRepository;
         this.currentUserService = currentUserService;
         this.publicIncidentMapper = publicIncidentMapper;
         this.plannedActionMapper = plannedActionMapper;
     }
 
+    @Transactional
     public IncidentDto createIncident(CreateIncidentRequest request, Jwt jwt) {
         validateRequest(request);
 
@@ -59,7 +65,7 @@ public class IncidentService {
         incident.setCategory(request.category());
         incident.setStatus(IncidentStatus.NEW);
         incident.setPriority(request.priority() != null ? request.priority() : IncidentPriority.UNDEFINED);
-        incident.setCityId(request.cityId());
+        incident.setCityId(resolveCityId(request));
         incident.setReporter(reporter);
 
         incident.setLat(request.location().lat());
@@ -125,6 +131,7 @@ public class IncidentService {
 
         boolean isAdmin = currentUser.getRole() == UserRole.ROLE_ADMIN;
         if (isAdmin) {
+            assertAdminCanAccessIncidentCity(currentUser, incident);
             incidentRepository.delete(incident);
             return;
         }
@@ -152,6 +159,8 @@ public class IncidentService {
 
         Incident incident = incidentRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+
+        assertAdminCanAccessIncidentCity(currentUser, incident);
 
         IncidentStatus currentStatus = incident.getStatus();
         IncidentStatus nextStatus = request.status();
@@ -188,13 +197,17 @@ public class IncidentService {
         return toDto(updated);
     }
 
-    public IncidentDto updateIncidentPriority(String id, UpdateIncidentPriorityRequest request) {
+    public IncidentDto updateIncidentPriority(String id, UpdateIncidentPriorityRequest request, Jwt jwt) {
         if (request == null || request.priority() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "priority is required");
         }
 
+        User currentUser = currentUserService.getCurrentUser(jwt);
+
         Incident incident = incidentRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+
+        assertAdminCanAccessIncidentCity(currentUser, incident);
 
         incident.setPriority(request.priority());
         Incident updated = incidentRepository.save(incident);
@@ -254,8 +267,12 @@ public class IncidentService {
             IncidentCategory category,
             IncidentPriority priority,
             String dateFrom,
-            String dateTo
+            String dateTo,
+            Jwt jwt
     ) {
+        User currentUser = currentUserService.getCurrentUser(jwt);
+        String adminCityId = requireAdminCityId(currentUser);
+
         validateAdminPagination(page, size);
         Sort sort = parseAdminSort(sortParam);
 
@@ -265,7 +282,7 @@ public class IncidentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dateFrom must be before or equal to dateTo");
         }
 
-        IncidentFilterDto filters = new IncidentFilterDto(status, category, priority, null, from, to, search);
+        IncidentFilterDto filters = new IncidentFilterDto(status, category, priority, adminCityId, from, to, search);
         Specification<Incident> spec = IncidentSpecification.withAdminFilters(filters);
         Pageable pageable = PageRequest.of(page, size, sort);
 
@@ -292,9 +309,13 @@ public class IncidentService {
         );
     }
 
-    public AdminIncidentDetailResponse getAdminIncidentDetailById(String id) {
+    public AdminIncidentDetailResponse getAdminIncidentDetailById(String id, Jwt jwt) {
+        User currentUser = currentUserService.getCurrentUser(jwt);
+
         Incident incident = incidentRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+
+        assertAdminCanAccessIncidentCity(currentUser, incident);
 
         IncidentReporterDto reporterDto = null;
         if (incident.getReporter() != null) {
@@ -537,11 +558,40 @@ public class IncidentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "images is required");
         }
 
+        if ((request.cityId() == null || request.cityId().isBlank())
+                && (request.citySlug() == null || request.citySlug().isBlank())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cityId or citySlug is required");
+        }
+
         boolean hasInvalidImage = request.images().stream().anyMatch(i ->
                 i == null || i.url() == null || i.url().isBlank() || i.publicId() == null || i.publicId().isBlank());
         if (hasInvalidImage) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "images[].url and images[].publicId are required");
         }
+    }
+
+    private String resolveCityId(CreateIncidentRequest request) {
+        if (request.cityId() != null && !request.cityId().isBlank()) {
+            return request.cityId().trim();
+        }
+
+        String citySlug = request.citySlug().trim();
+        return cityRepository.findBySlug(citySlug)
+                .orElseGet(() -> createCity(request, citySlug))
+                .getId()
+                .toString();
+    }
+
+    private City createCity(CreateIncidentRequest request, String citySlug) {
+        if (request.location().city() == null || request.location().city().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "location.city is required when creating a city from citySlug");
+        }
+
+        City city = new City();
+        city.setName(request.location().city().trim());
+        city.setSlug(citySlug);
+
+        return cityRepository.save(city);
     }
 
     private String resolveGeohash(IncidentLocationDto location) {
@@ -609,5 +659,26 @@ public class IncidentService {
                 incident.getCreatedAt().toString(),
                 incident.getUpdatedAt().toString()
         );
+    }
+
+    private String requireAdminCityId(User user) {
+        if (user.getRole() != UserRole.ROLE_ADMIN) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "ROLE_ADMIN is required");
+        }
+
+        if (user.getCityId() == null || user.getCityId().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin user has no assigned cityId");
+        }
+
+        return user.getCityId().trim();
+    }
+
+    private void assertAdminCanAccessIncidentCity(User user, Incident incident) {
+        String adminCityId = requireAdminCityId(user);
+        String incidentCityId = incident.getCityId() == null ? "" : incident.getCityId().trim();
+
+        if (!adminCityId.equals(incidentCityId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin cannot access incidents outside assigned city");
+        }
     }
 }

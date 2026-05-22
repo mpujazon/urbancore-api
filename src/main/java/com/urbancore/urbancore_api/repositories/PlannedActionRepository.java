@@ -22,11 +22,14 @@ public interface PlannedActionRepository extends JpaRepository<PlannedAction, UU
             join fetch pa.incident i
             where pa.scheduledStart < :dateTo
               and (pa.scheduledEnd is null or pa.scheduledEnd > :dateFrom)
+              and (:applyCity = false or i.cityId = :cityId)
               and (:status is null or pa.status = :status)
               and i.status <> :excludedIncidentStatus
             order by pa.scheduledStart asc
             """)
     List<PlannedAction> findPublicCalendarActions(
+            @Param("applyCity") boolean applyCity,
+            @Param("cityId") String cityId,
             @Param("dateFrom") Instant dateFrom,
             @Param("dateTo") Instant dateTo,
             @Param("status") PlannedActionStatus status,

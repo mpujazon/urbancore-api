@@ -26,6 +26,10 @@ public class User {
     @Schema(description = "Authorization role", example = "ROLE_CITIZEN")
     private UserRole role;
 
+    @Column(columnDefinition = "TEXT")
+    @Schema(description = "City identifier assigned to the user for scoped admin operations", example = "2f3c7a4e-9d2b-4f16-a51d-9d4b2f6e0c12", nullable = true)
+    private String cityId;
+
     public Long getId() {
         return id;
     }
@@ -56,5 +60,13 @@ public class User {
 
     public void setRole(UserRole role) {
         this.role = role;
+    }
+
+    public String getCityId() {
+        return cityId;
+    }
+
+    public void setCityId(String cityId) {
+        this.cityId = cityId;
     }
 }
