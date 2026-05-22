@@ -9,6 +9,7 @@ import com.urbancore.urbancore_api.models.City;
 import com.urbancore.urbancore_api.models.Incident;
 import com.urbancore.urbancore_api.models.IncidentCategory;
 import com.urbancore.urbancore_api.models.IncidentPriority;
+import com.urbancore.urbancore_api.models.IncidentStatus;
 import com.urbancore.urbancore_api.models.User;
 import com.urbancore.urbancore_api.models.UserRole;
 import com.urbancore.urbancore_api.repositories.CityRepository;
@@ -129,6 +130,96 @@ class IncidentServiceTest {
                 .hasMessageContaining("cityId or citySlug is required");
 
         verify(incidentRepository, never()).save(any(Incident.class));
+    }
+
+    @Test
+    @DisplayName("should reject admin incident status update outside assigned city")
+    void rejectsStatusUpdateOutsideAssignedCity() {
+        User admin = new User();
+        admin.setId(7L);
+        admin.setRole(UserRole.ROLE_ADMIN);
+        admin.setCityId("city-admin");
+
+        Incident incident = new Incident();
+        incident.setId("inc-001");
+        incident.setCityId("other-city");
+        incident.setStatus(IncidentStatus.NEW);
+
+        when(currentUserService.getCurrentUser(jwt)).thenReturn(admin);
+        when(incidentRepository.findById("inc-001")).thenReturn(Optional.of(incident));
+
+        assertThatThrownBy(() -> incidentService.updateIncidentStatus(
+                "inc-001",
+                new com.urbancore.urbancore_api.dtos.UpdateIncidentStatusRequest(IncidentStatus.UNDER_REVIEW, null),
+                jwt
+        )).isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Admin cannot access incidents outside assigned city");
+    }
+
+    @Test
+    @DisplayName("should reject admin incident priority update when admin has no city")
+    void rejectsPriorityUpdateWithoutAssignedCity() {
+        User admin = new User();
+        admin.setId(7L);
+        admin.setRole(UserRole.ROLE_ADMIN);
+
+        Incident incident = new Incident();
+        incident.setId("inc-001");
+        incident.setCityId("city-admin");
+
+        when(currentUserService.getCurrentUser(jwt)).thenReturn(admin);
+        when(incidentRepository.findById("inc-001")).thenReturn(Optional.of(incident));
+
+        assertThatThrownBy(() -> incidentService.updateIncidentPriority(
+                "inc-001",
+                new com.urbancore.urbancore_api.dtos.UpdateIncidentPriorityRequest(IncidentPriority.HIGH),
+                jwt
+        )).isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Admin user has no assigned cityId");
+    }
+
+    @Test
+    @DisplayName("should reject admin incident detail outside assigned city")
+    void rejectsAdminDetailOutsideAssignedCity() {
+        User admin = new User();
+        admin.setId(7L);
+        admin.setRole(UserRole.ROLE_ADMIN);
+        admin.setCityId("city-admin");
+
+        Incident incident = new Incident();
+        incident.setId("inc-001");
+        incident.setCityId("other-city");
+
+        when(currentUserService.getCurrentUser(jwt)).thenReturn(admin);
+        when(incidentRepository.findById("inc-001")).thenReturn(Optional.of(incident));
+
+        assertThatThrownBy(() -> incidentService.getAdminIncidentDetailById("inc-001", jwt))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Admin cannot access incidents outside assigned city");
+    }
+
+    @Test
+    @DisplayName("should reject admin list when admin has no city")
+    void rejectsAdminListWithoutAssignedCity() {
+        User admin = new User();
+        admin.setId(7L);
+        admin.setRole(UserRole.ROLE_ADMIN);
+
+        when(currentUserService.getCurrentUser(jwt)).thenReturn(admin);
+
+        assertThatThrownBy(() -> incidentService.getAdminIncidents(
+                0,
+                10,
+                "createdAt,desc",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                jwt
+        )).isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Admin user has no assigned cityId");
     }
 
     private CreateIncidentRequest validRequest(String cityId, String citySlug, String cityName) {
