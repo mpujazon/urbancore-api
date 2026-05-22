@@ -53,14 +53,14 @@ public class PlannedActionController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Create planned action",
-            description = "Creates a planned action for an incident. Private endpoint for ROLE_ADMIN users. Incidents in CANCELLED, REJECTED, or RESOLVED cannot be modified.",
+            description = "Creates a planned action for an incident. Private endpoint for ROLE_ADMIN users and limited to incidents in the admin assigned cityId. Incidents in CANCELLED, REJECTED, or RESOLVED cannot be modified.",
             security = @SecurityRequirement(name = "BearerAuth")
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Planned action created", content = @Content(schema = @Schema(implementation = PlannedActionResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Requires ROLE_ADMIN", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Requires ROLE_ADMIN with access to the incident city", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Incident or user not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "409", description = "Incident cannot be modified in CANCELLED, REJECTED, or RESOLVED status", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "Unexpected server error", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
@@ -70,7 +70,7 @@ public class PlannedActionController {
             @AuthenticationPrincipal Jwt jwt
     ) {
         User currentUser = currentUserService.getCurrentUser(jwt);
-        return plannedActionService.create(request, currentUser.getId());
+        return plannedActionService.create(request, currentUser);
     }
 
     @GetMapping
@@ -128,14 +128,14 @@ public class PlannedActionController {
     @PatchMapping("/{id}")
     @Operation(
             summary = "Update planned action",
-            description = "Updates editable fields and/or status for a planned action. Private endpoint for ROLE_ADMIN users. Incidents in CANCELLED, REJECTED, or RESOLVED cannot be modified.",
+            description = "Updates editable fields and/or status for a planned action. Private endpoint for ROLE_ADMIN users and limited to incidents in the admin assigned cityId. Incidents in CANCELLED, REJECTED, or RESOLVED cannot be modified.",
             security = @SecurityRequirement(name = "BearerAuth")
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Planned action updated", content = @Content(schema = @Schema(implementation = PlannedActionResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Requires ROLE_ADMIN", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Requires ROLE_ADMIN with access to the incident city", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Planned action or assigned user not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "409", description = "Incident cannot be modified in CANCELLED, REJECTED, or RESOLVED status", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "Unexpected server error", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
@@ -148,20 +148,20 @@ public class PlannedActionController {
             @AuthenticationPrincipal Jwt jwt
     ) {
         User currentUser = currentUserService.getCurrentUser(jwt);
-        return plannedActionService.update(id, request, currentUser.getId());
+        return plannedActionService.update(id, request, currentUser);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(
             summary = "Delete planned action",
-            description = "Deletes a planned action. Private endpoint for ROLE_ADMIN users. Incidents in CANCELLED, REJECTED, or RESOLVED cannot be modified.",
+            description = "Deletes a planned action. Private endpoint for ROLE_ADMIN users and limited to incidents in the admin assigned cityId. Incidents in CANCELLED, REJECTED, or RESOLVED cannot be modified.",
             security = @SecurityRequirement(name = "BearerAuth")
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Planned action deleted"),
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Requires ROLE_ADMIN", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Requires ROLE_ADMIN with access to the incident city", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Planned action not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "409", description = "Incident cannot be modified in CANCELLED, REJECTED, or RESOLVED status", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "Unexpected server error", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
@@ -173,6 +173,6 @@ public class PlannedActionController {
             @AuthenticationPrincipal Jwt jwt
     ) {
         User currentUser = currentUserService.getCurrentUser(jwt);
-        plannedActionService.delete(id, currentUser.getId());
+        plannedActionService.delete(id, currentUser);
     }
 }
