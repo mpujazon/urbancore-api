@@ -4,6 +4,7 @@ import com.urbancore.urbancore_api.dtos.*;
 import com.urbancore.urbancore_api.mappers.PublicIncidentMapper;
 import com.urbancore.urbancore_api.mappers.PlannedActionMapper;
 import com.urbancore.urbancore_api.models.*;
+import com.urbancore.urbancore_api.repositories.CityRepository;
 import com.urbancore.urbancore_api.repositories.IncidentRepository;
 import com.urbancore.urbancore_api.repositories.IncidentSpecification;
 import com.urbancore.urbancore_api.repositories.projections.IncidentPlannedActionsCountProjection;
@@ -15,6 +16,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -32,22 +34,26 @@ import java.util.UUID;
 public class IncidentService {
 
     private final IncidentRepository incidentRepository;
+    private final CityRepository cityRepository;
     private final CurrentUserService currentUserService;
     private final PublicIncidentMapper publicIncidentMapper;
     private final PlannedActionMapper plannedActionMapper;
 
     public IncidentService(
             IncidentRepository incidentRepository,
+            CityRepository cityRepository,
             CurrentUserService currentUserService,
             PublicIncidentMapper publicIncidentMapper,
             PlannedActionMapper plannedActionMapper
     ) {
         this.incidentRepository = incidentRepository;
+        this.cityRepository = cityRepository;
         this.currentUserService = currentUserService;
         this.publicIncidentMapper = publicIncidentMapper;
         this.plannedActionMapper = plannedActionMapper;
     }
 
+    @Transactional
     public IncidentDto createIncident(CreateIncidentRequest request, Jwt jwt) {
         validateRequest(request);
 
@@ -59,7 +65,7 @@ public class IncidentService {
         incident.setCategory(request.category());
         incident.setStatus(IncidentStatus.NEW);
         incident.setPriority(request.priority() != null ? request.priority() : IncidentPriority.UNDEFINED);
-        incident.setCityId(request.cityId());
+        incident.setCityId(resolveCityId(request));
         incident.setReporter(reporter);
 
         incident.setLat(request.location().lat());
@@ -537,11 +543,40 @@ public class IncidentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "images is required");
         }
 
+        if ((request.cityId() == null || request.cityId().isBlank())
+                && (request.citySlug() == null || request.citySlug().isBlank())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cityId or citySlug is required");
+        }
+
         boolean hasInvalidImage = request.images().stream().anyMatch(i ->
                 i == null || i.url() == null || i.url().isBlank() || i.publicId() == null || i.publicId().isBlank());
         if (hasInvalidImage) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "images[].url and images[].publicId are required");
         }
+    }
+
+    private String resolveCityId(CreateIncidentRequest request) {
+        if (request.cityId() != null && !request.cityId().isBlank()) {
+            return request.cityId().trim();
+        }
+
+        String citySlug = request.citySlug().trim();
+        return cityRepository.findBySlug(citySlug)
+                .orElseGet(() -> createCity(request, citySlug))
+                .getId()
+                .toString();
+    }
+
+    private City createCity(CreateIncidentRequest request, String citySlug) {
+        if (request.location().city() == null || request.location().city().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "location.city is required when creating a city from citySlug");
+        }
+
+        City city = new City();
+        city.setName(request.location().city().trim());
+        city.setSlug(citySlug);
+
+        return cityRepository.save(city);
     }
 
     private String resolveGeohash(IncidentLocationDto location) {

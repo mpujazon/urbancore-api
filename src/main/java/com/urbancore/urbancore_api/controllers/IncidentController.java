@@ -58,7 +58,9 @@ public class IncidentController {
                     Creates an urban incident with initial status NEW. \
                     The caller must be authenticated with role CITIZEN. \
                     Images must be uploaded to Cloudinary before calling this endpoint; \
-                    provide the returned Cloudinary identifiers in the images array.
+                    provide the returned Cloudinary identifiers in the images array. \
+                    Provide cityId when the city UUID is already known; otherwise provide citySlug \
+                    and the backend will link the incident to an existing city or create it first.
                     """,
             security = @SecurityRequirement(name = "BearerAuth")
     )
