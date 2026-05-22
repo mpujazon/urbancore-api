@@ -11,6 +11,7 @@ import com.urbancore.urbancore_api.models.IncidentStatusHistory;
 import com.urbancore.urbancore_api.models.PlannedAction;
 import com.urbancore.urbancore_api.models.PlannedActionStatus;
 import com.urbancore.urbancore_api.models.User;
+import com.urbancore.urbancore_api.models.UserRole;
 import com.urbancore.urbancore_api.repositories.IncidentRepository;
 import com.urbancore.urbancore_api.repositories.PlannedActionRepository;
 import com.urbancore.urbancore_api.repositories.UserRepository;
@@ -51,14 +52,15 @@ public class PlannedActionService {
     }
 
     @Transactional
-    public PlannedActionResponse create(CreatePlannedActionRequest request, Long currentUserId) {
+    public PlannedActionResponse create(CreatePlannedActionRequest request, User currentUser) {
         validateDateRange(request.scheduledStart(), request.scheduledEnd());
 
         Incident incident = incidentRepository.findById(request.incidentId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found"));
+        assertAdminCanAccessIncidentCity(currentUser, incident);
         assertIncidentIsMutable(incident);
 
-        User createdBy = userRepository.findById(currentUserId)
+        User createdBy = userRepository.findById(currentUser.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Creator user not found"));
 
         User assignedToUser = resolveAssignedUser(request.assignedToUserId());
@@ -74,16 +76,17 @@ public class PlannedActionService {
         );
 
         PlannedAction saved = plannedActionRepository.save(plannedAction);
-        transitionIncidentStatus(incident, IncidentStatus.PLANNED, String.valueOf(currentUserId));
+        transitionIncidentStatus(incident, IncidentStatus.PLANNED, String.valueOf(currentUser.getId()));
 
         return plannedActionMapper.toResponse(saved);
     }
 
     @Transactional
-    public PlannedActionResponse update(UUID plannedActionId, UpdatePlannedActionRequest request, Long currentUserId) {
+    public PlannedActionResponse update(UUID plannedActionId, UpdatePlannedActionRequest request, User currentUser) {
         PlannedAction plannedAction = plannedActionRepository.findById(plannedActionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Planned action not found"));
 
+        assertAdminCanAccessIncidentCity(currentUser, plannedAction.getIncident());
         assertIncidentIsMutable(plannedAction.getIncident());
 
         Instant nextStart = request.scheduledStart() != null ? request.scheduledStart() : plannedAction.getScheduledStart();
@@ -106,22 +109,23 @@ public class PlannedActionService {
         }
 
         PlannedAction saved = plannedActionRepository.save(plannedAction);
-        recalculateIncidentStatusIfNoActiveActions(saved.getIncident(), String.valueOf(currentUserId));
+        recalculateIncidentStatusIfNoActiveActions(saved.getIncident(), String.valueOf(currentUser.getId()));
 
         return plannedActionMapper.toResponse(saved);
     }
 
     @Transactional
-    public void delete(UUID plannedActionId, Long currentUserId) {
+    public void delete(UUID plannedActionId, User currentUser) {
         PlannedAction plannedAction = plannedActionRepository.findById(plannedActionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Planned action not found"));
 
+        assertAdminCanAccessIncidentCity(currentUser, plannedAction.getIncident());
         assertIncidentIsMutable(plannedAction.getIncident());
 
         Incident incident = plannedAction.getIncident();
         plannedActionRepository.delete(plannedAction);
 
-        recalculateIncidentStatusIfNoActiveActions(incident, String.valueOf(currentUserId));
+        recalculateIncidentStatusIfNoActiveActions(incident, String.valueOf(currentUser.getId()));
     }
 
     @Transactional(readOnly = true)
@@ -272,5 +276,20 @@ public class PlannedActionService {
 
     private ResponseStatusException badRequest(String code, String message) {
         return new ResponseStatusException(HttpStatus.BAD_REQUEST, code + ": " + message);
+    }
+
+    private void assertAdminCanAccessIncidentCity(User user, Incident incident) {
+        if (user.getRole() != UserRole.ROLE_ADMIN) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "ROLE_ADMIN is required");
+        }
+
+        if (user.getCityId() == null || user.getCityId().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin user has no assigned cityId");
+        }
+
+        String incidentCityId = incident.getCityId() == null ? "" : incident.getCityId().trim();
+        if (!user.getCityId().trim().equals(incidentCityId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin cannot access incidents outside assigned city");
+        }
     }
 }
