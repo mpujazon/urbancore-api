@@ -1,6 +1,8 @@
 package com.urbancore.urbancore_api.config;
 
 import com.urbancore.urbancore_api.security.CustomJwtAuthenticationConverter;
+import com.urbancore.urbancore_api.security.RestAccessDeniedHandler;
+import com.urbancore.urbancore_api.security.RestAuthenticationEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -18,9 +20,17 @@ import java.util.List;
 public class SecurityConfig {
 
     private final CustomJwtAuthenticationConverter customJwtAuthenticationConverter;
+    private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+    private final RestAccessDeniedHandler restAccessDeniedHandler;
 
-    public SecurityConfig(CustomJwtAuthenticationConverter customJwtAuthenticationConverter) {
+    public SecurityConfig(
+            CustomJwtAuthenticationConverter customJwtAuthenticationConverter,
+            RestAuthenticationEntryPoint restAuthenticationEntryPoint,
+            RestAccessDeniedHandler restAccessDeniedHandler
+    ) {
         this.customJwtAuthenticationConverter = customJwtAuthenticationConverter;
+        this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
+        this.restAccessDeniedHandler = restAccessDeniedHandler;
     }
 
     @Bean
@@ -32,6 +42,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/incidents/me").hasRole("CITIZEN")
                         .requestMatchers(HttpMethod.POST, "/api/incidents").hasRole("CITIZEN")
+                        .requestMatchers(HttpMethod.POST, "/api/ai/incident-suggestions").hasRole("CITIZEN")
                         .requestMatchers(HttpMethod.PATCH, "/api/incidents/*/status").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/incidents/*/priority").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/incidents/*").hasAnyRole("CITIZEN", "ADMIN")
@@ -50,6 +61,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                         .anyRequest().permitAll()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(restAuthenticationEntryPoint)
+                        .accessDeniedHandler(restAccessDeniedHandler)
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(customJwtAuthenticationConverter))
