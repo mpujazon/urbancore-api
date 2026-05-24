@@ -1,5 +1,6 @@
 package com.urbancore.urbancore_api.controllers;
 
+import com.urbancore.urbancore_api.ai.exception.AiSuggestionException;
 import com.urbancore.urbancore_api.dtos.ApiErrorResponse;
 import com.urbancore.urbancore_api.dtos.FieldErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -26,6 +28,27 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private static final Pattern CODED_REASON_PATTERN = Pattern.compile("^([A-Z0-9_]+):\\s*(.+)$");
+
+    @ExceptionHandler(AiSuggestionException.class)
+    public ResponseEntity<ApiErrorResponse> handleAiSuggestionException(
+            AiSuggestionException ex,
+            HttpServletRequest request
+    ) {
+        String traceId = UUID.randomUUID().toString().substring(0, 10);
+
+        ApiErrorResponse body = new ApiErrorResponse(
+                Instant.now().toString(),
+                ex.getStatus().value(),
+                ex.getStatus().getReasonPhrase(),
+                ex.getCode(),
+                ex.getMessage(),
+                request.getRequestURI(),
+                List.of(),
+                traceId
+        );
+
+        return ResponseEntity.status(ex.getStatus()).body(body);
+    }
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiErrorResponse> handleResponseStatusException(
@@ -98,6 +121,27 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
                 "VALIDATION_FAILED",
                 message,
+                request.getRequestURI(),
+                List.of(),
+                traceId
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleMaxUploadSizeExceeded(
+            MaxUploadSizeExceededException ex,
+            HttpServletRequest request
+    ) {
+        String traceId = UUID.randomUUID().toString().substring(0, 10);
+
+        ApiErrorResponse body = new ApiErrorResponse(
+                Instant.now().toString(),
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                "AI_IMAGE_TOO_LARGE",
+                "Image exceeds maximum size of 5MB.",
                 request.getRequestURI(),
                 List.of(),
                 traceId
