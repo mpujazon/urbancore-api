@@ -1,7 +1,7 @@
 package com.urbancore.urbancore_api.ai.mapper;
 
 import com.urbancore.urbancore_api.ai.dto.IncidentSuggestionResponse;
-import com.urbancore.urbancore_api.models.IncidentCategory;
+import com.urbancore.urbancore_api.incident.entity.IncidentCategory;
 import org.springframework.stereotype.Component;
 
 import java.util.Locale;

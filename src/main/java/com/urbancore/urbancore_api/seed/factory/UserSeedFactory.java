@@ -1,6 +1,6 @@
 package com.urbancore.urbancore_api.seed.factory;
 
-import com.urbancore.urbancore_api.models.UserRole;
+import com.urbancore.urbancore_api.auth.entity.UserRole;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

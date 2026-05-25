@@ -1,7 +1,7 @@
 package com.urbancore.urbancore_api.security;
 
-import com.urbancore.urbancore_api.models.User;
-import com.urbancore.urbancore_api.repositories.UserRepository;
+import com.urbancore.urbancore_api.auth.entity.User;
+import com.urbancore.urbancore_api.auth.repository.UserRepository;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
