@@ -1,6 +1,6 @@
 package com.urbancore.urbancore_api.seed.factory;
 
-import com.urbancore.urbancore_api.models.PlannedActionStatus;
+import com.urbancore.urbancore_api.plannedaction.entity.PlannedActionStatus;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;

@@ -6,7 +6,7 @@ import com.urbancore.urbancore_api.ai.exception.AiSuggestionException;
 import com.urbancore.urbancore_api.ai.mapper.IncidentSuggestionNormalizer;
 import com.urbancore.urbancore_api.ai.prompt.IncidentSuggestionPromptFactory;
 import com.urbancore.urbancore_api.ai.validation.ImageFileValidator;
-import com.urbancore.urbancore_api.models.IncidentCategory;
+import com.urbancore.urbancore_api.incident.entity.IncidentCategory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

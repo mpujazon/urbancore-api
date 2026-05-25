@@ -2,7 +2,7 @@ package com.urbancore.urbancore_api.seed;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.urbancore.urbancore_api.models.IncidentCategory;
+import com.urbancore.urbancore_api.incident.entity.IncidentCategory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
