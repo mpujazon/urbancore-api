@@ -37,4 +37,6 @@ public interface PlannedActionRepository extends JpaRepository<PlannedAction, UU
     );
 
     boolean existsByIncidentIdAndStatusNot(String incidentId, PlannedActionStatus status);
+
+    boolean existsByIncidentIdAndTitle(String incidentId, String title);
 }

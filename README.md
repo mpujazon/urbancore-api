@@ -91,6 +91,67 @@ Run the automated tests for this system with:
 ./mvnw test
 ```
 
+## Production Demo Seed 🌱
+
+UrbanCore includes a production-safe demo seed that is disabled by default and only runs when explicitly enabled.
+
+### Enable the seed
+
+Set both variables before starting the application:
+
+```bash
+export URBANCORE_SEED_ENABLED=true
+export URBANCORE_SEED_MODE=production-demo
+```
+
+Then run:
+
+```bash
+./mvnw spring-boot:run
+```
+
+If either variable is missing or different, the seed does not run.
+
+### Cloudinary image catalog
+
+Seed images are read from:
+
+- `src/main/resources/seed/cloudinary-seed-images.json`
+
+The catalog is grouped by `IncidentCategory` and each image entry must contain:
+
+- `publicId`
+- `url`
+- `thumbnailUrl`
+- `alt`
+
+Each category must have at least one image. In `production-demo` mode, startup fails fast with a clear error if any category is empty.
+
+### Why the seed does not upload images
+
+The seed never uploads files to Cloudinary. It only references existing assets already available in your Cloudinary account. This keeps startup deterministic, avoids accidental media duplication, and prevents unexpected external writes in production environments.
+
+### How idempotency works
+
+Seed idempotency is managed with the `seed_registry` table:
+
+- `id`
+- `seed_key`
+- `entity_type`
+- `entity_id`
+- `created_at`
+
+Each seeded entity gets a deterministic `seedKey` (for example `production-demo:incident:inc-001`).
+On startup, if a `seedKey` is already registered, that entity is skipped.
+This prevents duplicates for cities, users, incidents, images, status history, and planned actions across repeated application starts.
+
+### Adding your real Cloudinary assets
+
+1. Upload or identify the real images in Cloudinary manually.
+2. Copy each asset `publicId` and public delivery URL.
+3. Add/update entries in `cloudinary-seed-images.json` for each category.
+4. Ensure every category has at least one valid image object.
+
 ### End-to-end tests 🔩
 
 This backend currently emphasizes API and integration-level tests in the Spring test suite. If your team adds dedicated end-to-end flows, run them after the main test suite.
