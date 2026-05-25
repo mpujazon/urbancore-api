@@ -1,6 +1,6 @@
 package com.urbancore.urbancore_api.ai.dto;
 
-import com.urbancore.urbancore_api.models.IncidentCategory;
+import com.urbancore.urbancore_api.incident.entity.IncidentCategory;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "AI suggestion response for incident form autocompletion")

@@ -1,8 +1,8 @@
 package com.urbancore.urbancore_api.seed.factory;
 
-import com.urbancore.urbancore_api.models.IncidentCategory;
-import com.urbancore.urbancore_api.models.IncidentPriority;
-import com.urbancore.urbancore_api.models.IncidentStatus;
+import com.urbancore.urbancore_api.incident.entity.IncidentCategory;
+import com.urbancore.urbancore_api.incident.entity.IncidentPriority;
+import com.urbancore.urbancore_api.incident.entity.IncidentStatus;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;

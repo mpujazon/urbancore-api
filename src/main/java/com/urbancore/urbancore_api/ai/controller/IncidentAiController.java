@@ -2,7 +2,7 @@ package com.urbancore.urbancore_api.ai.controller;
 
 import com.urbancore.urbancore_api.ai.dto.IncidentSuggestionResponse;
 import com.urbancore.urbancore_api.ai.service.IncidentImageSuggestionService;
-import com.urbancore.urbancore_api.dtos.ApiErrorResponse;
+import com.urbancore.urbancore_api.common.dto.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
