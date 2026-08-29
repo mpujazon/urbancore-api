@@ -1,6 +1,5 @@
 package com.urbancore.urbancore_api.health.controller;
 
-import com.urbancore.urbancore_api.common.dto.ApiErrorResponse;
 import com.urbancore.urbancore_api.health.dto.HealthResponse;
 import com.urbancore.urbancore_api.health.service.HealthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,23 +26,16 @@ public class HealthController {
     @GetMapping
     @Operation(
             summary = "Health check",
-            description = "Returns 200 OK when the application is healthy, including database connectivity. If the database is unreachable, returns a managed 503 error response."
+            description = "Returns 200 OK when the application is running. Does not check database connectivity to avoid waking the Neon free tier instance."
     )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
                     description = "Application is healthy",
                     content = @Content(schema = @Schema(implementation = HealthResponse.class))
-            ),
-            @ApiResponse(
-                    responseCode = "503",
-                    description = "Application is unhealthy (database unreachable)",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
             )
     })
     public HealthResponse health() {
-        healthService.throwIfUnhealthy();
-
-        return new HealthResponse("UP", "UP", healthService.now());
+        return new HealthResponse("UP", "SKIPPED", healthService.now());
     }
 }
